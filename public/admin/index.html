@@ -27,31 +27,41 @@
                 Shop Admin
             </a>
             <nav>
-                <a href="#products" class="nav-item active">Products</a>
+                <a href="#products" class="nav-item active" onclick="switchAdminTab('products')">Products</a>
+                <a href="#feedback" class="nav-item" onclick="switchAdminTab('feedback')">Feedback</a>
                 <a href="#" onclick="logout(); return false;" class="nav-item">Logout</a>
             </nav>
         </aside>
 
         <main class="content">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                <h1>Products Manager</h1>
-                <button class="btn btn-primary" onclick="openModal()">+ Add Product</button>
+            <div id="productsPanel">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h1>Products Manager</h1>
+                    <button class="btn btn-primary" onclick="openModal()">+ Add Product</button>
+                </div>
+
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Price</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productsTableBody">
+                        <!-- Populated via JS -->
+                    </tbody>
+                </table>
             </div>
 
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Category</th>
-                        <th>Price</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="productsTableBody">
+            <div id="feedbackPanel" style="display: none;">
+                <h1 style="margin-bottom: 2rem;">User Feedback</h1>
+                <div id="feedbackContainer">
                     <!-- Populated via JS -->
-                </tbody>
-            </table>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -149,6 +159,38 @@
 
             const catSelect = document.getElementById('pCategory');
             catSelect.innerHTML = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+            
+            loadFeedback();
+        }
+
+        async function loadFeedback() {
+            try {
+                const ratings = await api.ratings.getAll();
+                const container = document.getElementById('feedbackContainer');
+                container.innerHTML = ratings.map(r => `
+                    <div class="auth-container" style="margin-bottom: 1rem; max-width: 100%;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <div>
+                                <strong style="color: var(--primary); font-size: 1.1rem;">${'★'.repeat(r.score)}${'☆'.repeat(5-r.score)}</strong>
+                                <div style="margin-top: 0.5rem; font-size: 1rem;">"${r.comment}"</div>
+                            </div>
+                            <div style="text-align: right; font-size: 0.8rem; color: var(--text-muted);">
+                                <div>${r.user_name}</div>
+                                <div>${new Date(r.created_at).toLocaleDateString()}</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                if(ratings.length === 0) container.innerHTML = '<p>No feedback received yet.</p>';
+            } catch(e) { console.error(e); }
+        }
+
+        function switchAdminTab(tab) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.querySelector(`.nav-item[href="#${tab}"]`).classList.add('active');
+            
+            document.getElementById('productsPanel').style.display = tab === 'products' ? 'block' : 'none';
+            document.getElementById('feedbackPanel').style.display = tab === 'feedback' ? 'block' : 'none';
         }
 
         // --- Specifications Manager Logic ---

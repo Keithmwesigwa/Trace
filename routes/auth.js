@@ -4,20 +4,26 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../config/db');
 const { JWT_SECRET } = require('../middleware/auth');
+const validate = require('../middleware/validate');
 
 // Register
-router.post('/register', async (req, res) => {
-    const { name, email, password } = req.body;
-    if (!name || !email || !password)
-        return res.status(400).json({ error: 'All fields required.' });
+router.post('/register', validate({
+    name: { required: true, minLength: 2 },
+    email: { required: true, type: 'email' },
+    password: { required: true, minLength: 6 },
+    contact: { required: true, minLength: 8, maxLength: 20 }
+}), async (req, res) => {
+    const { name, email, password, contact } = req.body;
     try {
         const [existing] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
         if (existing.length > 0) return res.status(409).json({ error: 'Email already registered.' });
+        
         const hashed = await bcrypt.hash(password, 12);
         const [result] = await db.query(
-            'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-            [name, email, hashed, 'user']
+            'INSERT INTO users (name, email, password, contact, role) VALUES (?, ?, ?, ?, ?)',
+            [name, email, hashed, contact, 'user']
         );
+        
         const token = jwt.sign({ id: result.insertId, name, email, role: 'user' }, JWT_SECRET, { expiresIn: '7d' });
         res.status(201).json({ token, user: { id: result.insertId, name, email, role: 'user' } });
     } catch (err) {

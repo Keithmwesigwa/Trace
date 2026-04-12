@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Trace</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .profile-tabs { display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
+        .p-tab { padding: 0.5rem 1rem; cursor: pointer; font-weight: 600; color: var(--text-muted); }
+        .p-tab.active { color: var(--primary); border-bottom: 2px solid var(--primary); margin-bottom: -1px; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        
+        .rating-stars { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+        .star { cursor: pointer; font-size: 1.5rem; color: #ddd; transition: color 0.22s; }
+        .star.filled { color: #fbbf24; }
+    </style>
+</head>
+<body style="background: var(--bg-color);">
+    <div class="mobile-header">
+        <a href="/" style="display: flex; align-items: center; gap: 0.5rem;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            <h1 style="font-size: 1.25rem;">My Profile</h1>
+        </a>
+        <button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="logout()">Logout</button>
+    </div>
+
+    <main class="container" style="margin-top: 2rem; padding-bottom: 5rem;">
+        <div id="userInfo" style="margin-bottom: 2rem;">
+            <h2 id="userName" style="margin-bottom: 0.25rem;">User Name</h2>
+            <p id="userEmail" style="font-size: 0.9rem;">email@example.com</p>
+        </div>
+
+        <div class="profile-tabs">
+            <div class="p-tab active" data-tab="wishlist">Wishlist</div>
+            <div class="p-tab" data-tab="rating">Rate Us</div>
+            <div class="p-tab" data-tab="about">About Trace</div>
+        </div>
+
+        <!-- Wishlist -->
+        <div class="tab-panel active" id="tab-wishlist">
+            <div id="wishlistContainer" class="product-grid">
+                <!-- Wishlist Items -->
+            </div>
+            <div id="wishlistEmpty" style="text-align: center; padding: 3rem 0; display: none;">
+                <p>Your wishlist is currently empty.</p>
+                <a href="/products.html" class="btn btn-primary" style="margin-top: 1rem;">Go Shopping</a>
+            </div>
+        </div>
+
+        <!-- Rating -->
+        <div class="tab-panel" id="tab-rating">
+            <div class="auth-container" style="margin: 0; max-width: 100%;">
+                <h3>Your Feedback</h3>
+                <p style="font-size: 0.9rem; margin-bottom: 1.5rem;">Help us improve Trace by sharing your thoughts.</p>
+                
+                <form id="ratingForm">
+                    <div class="rating-stars" id="starContainer">
+                        <span class="star" data-value="1">★</span>
+                        <span class="star" data-value="2">★</span>
+                        <span class="star" data-value="3">★</span>
+                        <span class="star" data-value="4">★</span>
+                        <span class="star" data-value="5">★</span>
+                    </div>
+                    <input type="hidden" id="starValue" value="0">
+                    
+                    <div class="form-group">
+                        <label>Comment</label>
+                        <textarea class="form-control" id="ratingComment" rows="4" placeholder="Tell us what you love or what we can fix..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Submit Feedback</button>
+                    <p id="ratingStatus" style="margin-top: 1rem; text-align: center; font-weight: 600;"></p>
+                </form>
+            </div>
+        </div>
+
+        <!-- About -->
+        <div class="tab-panel" id="tab-about">
+            <div class="auth-container" style="margin: 0; max-width: 100%;">
+                <h2>About Trace</h2>
+                <div style="margin-top: 1.5rem; line-height: 1.6;">
+                    <p><strong>Trace</strong> is your premium companion for tracking gadgets and finding fair prices.</p>
+                    <p style="margin-top: 1rem;">We believe in transparency and empowering consumers with data. Our mission is to ensure you never overpay for your favorite devices and that you always have a seamless experience managing your digital wishlist.</p>
+                    <p style="margin-top: 1rem;">Built with love for tech enthusiasts everywhere.</p>
+                    <div style="margin-top: 2rem; border-top: 1px solid var(--border-color); padding-top: 1rem; color: var(--text-muted); font-size: 0.85rem;">
+                        Version 1.1.0 • PWA Enabled
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="/" class="bottom-nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            Home
+        </a>
+        <a href="/products.html" class="bottom-nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+            Shop
+        </a>
+        <a href="/profile.html" class="bottom-nav-item active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            Profile
+        </a>
+    </nav>
+
+    <script src="/js/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (!user) return window.location.href = '/login.html';
+
+            document.getElementById('userName').textContent = user.name;
+            document.getElementById('userEmail').textContent = user.email;
+
+            // Load Wishlist
+            loadWishlist();
+
+            // Tab Switching
+            document.querySelectorAll('.p-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.p-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+                });
+            });
+
+            // Star Rating Logic
+            const stars = document.querySelectorAll('.star');
+            stars.forEach(star => {
+                star.addEventListener('click', () => {
+                    const val = star.dataset.value;
+                    document.getElementById('starValue').value = val;
+                    stars.forEach(s => {
+                        s.classList.toggle('filled', s.dataset.value <= val);
+                    });
+                });
+            });
+
+            // Handle Review Submit
+            document.getElementById('ratingForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const score = document.getElementById('starValue').value;
+                const comment = document.getElementById('ratingComment').value;
+                const status = document.getElementById('ratingStatus');
+
+                if (score == 0) return alert('Please select a star rating.');
+
+                try {
+                    await api.ratings.submit({ score, comment });
+                    status.textContent = 'Feedback submitted! Thank you.';
+                    status.style.color = 'var(--primary)';
+                    e.target.reset();
+                    document.getElementById('starValue').value = 0;
+                    stars.forEach(s => s.classList.remove('filled'));
+                } catch (err) {
+                    status.textContent = 'Failed to submit. Please try again.';
+                    status.style.color = 'red';
+                }
+            });
+        });
+
+        async function loadWishlist() {
+            const container = document.getElementById('wishlistContainer');
+            const empty = document.getElementById('wishlistEmpty');
+            try {
+                const products = await api.wishlist.getAll();
+                container.innerHTML = '';
+                if (products.length === 0) {
+                    empty.style.display = 'block';
+                    return;
+                }
+                empty.style.display = 'none';
+                products.forEach(p => {
+                    const img = p.images && p.images.length > 0 ? p.images[0] : 'https://via.placeholder.com/300?text=No+Image';
+                    container.innerHTML += `
+                        <div class="product-card">
+                            <a href="/product.html?id=${p.id}" class="product-image-wrap">
+                                <img src="${img}" alt="${p.name}">
+                            </a>
+                            <div class="product-info">
+                                <div class="brand-text">${p.brand}</div>
+                                <div class="product-title">${p.name}</div>
+                                <div class="product-price">$${parseFloat(p.price).toFixed(2)}</div>
+                                <button onclick="removeFromWishlist(${p.id})" class="btn btn-outline" style="width:100%; border-color:#ef4444; color:#ef4444; font-size:0.8rem; margin-top:0.5rem">Remove</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function removeFromWishlist(id) {
+            if(confirm('Remove item from wishlist?')){
+                await api.wishlist.toggle(id);
+                loadWishlist();
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/login.html';
+        }
+    </script>
+</body>
+</html>

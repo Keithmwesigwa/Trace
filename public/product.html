@@ -21,9 +21,7 @@
         .spec-item .key { color: var(--text-muted); font-weight: 500; }
         .spec-item .val { color: var(--text-main); font-weight: 600; text-align: right; max-width: 60%; }
 
-        .buy-action-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--white); border-top: 1px solid var(--border-color); padding: 1rem 1.5rem; padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: space-between; align-items: center; z-index: 999; box-shadow: 0 -4px 15px rgba(0,0,0,0.05); }
         .buy-price { font-size: 1.5rem; font-weight: 800; color: var(--primary-dark); }
-        .buy-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; margin-bottom: 0.2rem; }
     </style>
 </head>
 <body>
@@ -39,8 +37,15 @@
         
         <div class="details-sheet container">
             <div style="text-transform: uppercase; letter-spacing: 0.05em; color: var(--primary); font-weight: 700; font-size: 0.8rem; margin-bottom: 0.5rem;" id="prodBrand"></div>
-            <h1 id="prodTitle" style="font-size: 1.5rem; margin-bottom: 1.5rem;"></h1>
+            <h1 id="prodTitle" style="font-size: 1.5rem; margin-bottom: 0.5rem;"></h1>
             
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <div class="buy-price" id="prodPrice">$0.00</div>
+                <button id="wishlistBtn" class="btn btn-outline" style="width: 44px; height: 44px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                    <svg id="wishlistIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                </button>
+            </div>
+
             <p id="prodDesc" style="font-size: 1rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 2rem;"></p>
             
             <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">Specifications</h3>
@@ -48,14 +53,10 @@
             
             <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">You might also like</h3>
             <div class="categories-scroll" id="relatedScroll"></div>
-        </div>
-
-        <div class="buy-action-bar">
-            <div>
-                <div class="buy-label">Fair Price verified</div>
-                <div class="buy-price" id="prodPrice"></div>
+            
+            <div style="margin-top: 2rem;">
+                <button class="btn btn-primary" style="width: 100%;" onclick="alert('Order functionality coming soon!')">Contact for Price</button>
             </div>
-            <button class="btn btn-primary" onclick="alert('Demo: Added to cart!')">Buy Now</button>
         </div>
     </div>
 
@@ -104,6 +105,14 @@
                     `;
                 });
 
+                // Initial wishlist check
+                checkWishlistStatus(id);
+
+                document.getElementById('wishlistBtn').onclick = async () => {
+                    const res = await api.wishlist.toggle(id);
+                    updateWishlistUI(res.status === 'added');
+                };
+
                 loader.style.display = 'none';
                 content.style.display = 'block';
             } catch (err) {
@@ -111,6 +120,28 @@
                 alert('Failed to load product.');
             }
         });
+
+        async function checkWishlistStatus(id) {
+            try {
+                const wishlist = await api.wishlist.getAll();
+                const isInWishlist = wishlist.some(item => item.id == id);
+                updateWishlistUI(isInWishlist);
+            } catch(e) {}
+        }
+
+        function updateWishlistUI(isInWishlist) {
+            const icon = document.getElementById('wishlistIcon');
+            const btn = document.getElementById('wishlistBtn');
+            if (isInWishlist) {
+                icon.setAttribute('fill', 'var(--primary)');
+                icon.setAttribute('stroke', 'var(--primary)');
+                btn.style.borderColor = 'var(--primary)';
+            } else {
+                icon.setAttribute('fill', 'none');
+                icon.setAttribute('stroke', 'currentColor');
+                btn.style.borderColor = 'var(--border-color)';
+            }
+        }
     </script>
 </body>
 </html>

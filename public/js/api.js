@@ -63,6 +63,16 @@ const api = {
         const formData = new FormData();
         formData.append('image', file);
         return api.request('/upload', { method: 'POST', body: formData });
+    },
+
+    wishlist: {
+        toggle: (productId) => api.request('/wishlist', { method: 'POST', body: JSON.stringify({ productId }) }),
+        getAll: () => api.request('/wishlist')
+    },
+
+    ratings: {
+        submit: (data) => api.request('/ratings', { method: 'POST', body: JSON.stringify(data) }),
+        getAll: () => api.request('/ratings')
     }
 };
 

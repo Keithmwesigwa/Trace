@@ -1,3 +1,4 @@
+require('dotenv').config();
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 
@@ -18,6 +19,7 @@ async function initDB() {
                 name VARCHAR(100),
                 email VARCHAR(150) UNIQUE,
                 password VARCHAR(255),
+                contact VARCHAR(20),
                 role ENUM('user','admin') DEFAULT 'user',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -45,6 +47,31 @@ async function initDB() {
                 images JSON,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (category_id) REFERENCES categories(id)
+            )
+        `);
+
+        console.log('Creating wishlists table...');
+        await db.query(`
+            CREATE TABLE wishlists (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT,
+                product_id INT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+                UNIQUE KEY (user_id, product_id)
+            )
+        `);
+
+        console.log('Creating ratings table...');
+        await db.query(`
+            CREATE TABLE ratings (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT,
+                score INT,
+                comment TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         `);
 

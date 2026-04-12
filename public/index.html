@@ -93,6 +93,7 @@
                         <span>Welcome back,</span>
                         <strong>${user.name}</strong>
                     </div>
+                    <a href="/profile.html" class="dropdown-link">My Profile</a>
                     ${user.role === 'admin' ? '<a href="/admin/index.html" class="dropdown-link">Admin Dashboard</a>' : ''}
                     <a href="#" class="dropdown-link" id="logoutBtn">Logout</a>
                 `;
@@ -102,8 +103,8 @@
                 };
 
                 const profileBtn = document.getElementById('mobileProfileBtn');
-                profileBtn.href = "#";
-                profileBtn.onclick = (e) => { e.preventDefault(); if(confirm('Logout?')){ localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.reload(); }};
+                profileBtn.href = "/profile.html";
+                profileBtn.onclick = null;
             } else {
                 // Desktop Dropdown for Guest
                 document.getElementById('accountDropdown').innerHTML = `
