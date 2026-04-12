@@ -3,15 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ShopSale</title>
+    <title>Trace</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#7C3AED">
+    <link rel="apple-touch-icon" href="/icons/icon.png">
 </head>
 <body>
     <!-- Desktop Header -->
     <header>
         <div class="container nav-container">
-            <a href="/" class="logo">ShopSale</a>
+            <a href="/" class="logo">Trace</a>
             <nav class="nav-links">
                 <a href="/products.html">All Products</a>
             </nav>
@@ -28,7 +31,7 @@
 
     <!-- Mobile Header -->
     <div class="mobile-header">
-        <h1 style="font-size: 1.5rem; color: var(--primary);">ShopSale</h1>
+        <h1 style="font-size: 1.5rem; color: var(--primary);">Trace</h1>
         <div id="topAuth">
             <a href="/login.html" style="font-size: 0.9rem; font-weight: 600; color: var(--primary);">Login</a>
         </div>
@@ -145,6 +148,15 @@
                 console.error(err);
             }
         });
+
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('SW Registered'))
+                    .catch(err => console.log('SW registration failed: ', err));
+            });
+        }
     </script>
 </body>
 </html>

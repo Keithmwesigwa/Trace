@@ -1,0 +1,21 @@
+{
+  "name": "Trace - Electronics Tracker",
+  "short_name": "Trace",
+  "description": "Premium electronics tracking and shopping platform.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F9FAFB",
+  "theme_color": "#7C3AED",
+  "icons": [
+    {
+      "src": "/icons/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

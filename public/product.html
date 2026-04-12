@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Product Details - ShopSale</title>
+    <title>Product Details - Trace</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
     <style>
@@ -74,7 +74,7 @@
                 const data = await api.products.getById(id);
                 const p = data.product;
                 
-                document.title = `${p.name} - ShopSale`;
+                document.title = `${p.name} - Trace`;
                 document.getElementById('prodBrand').textContent = p.brand;
                 document.getElementById('prodTitle').textContent = p.name;
                 document.getElementById('prodPrice').textContent = `$${parseFloat(p.price).toFixed(2)}`;
