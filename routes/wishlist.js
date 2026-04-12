@@ -5,8 +5,8 @@ const { authenticateToken } = require('../middleware/auth');
 
 // Toggle wishlist item
 router.post('/', authenticateToken, async (req, res) => {
-    const { productId } = req.body;
-    if (!productId) return res.status(400).json({ error: 'Product ID required.' });
+    const productId = parseInt(req.body.productId);
+    if (!productId || isNaN(productId)) return res.status(400).json({ error: 'Valid Product ID required.' });
     
     try {
         const [existing] = await db.query('SELECT id FROM wishlists WHERE user_id = ? AND product_id = ?', [req.user.id, productId]);
@@ -18,8 +18,8 @@ router.post('/', authenticateToken, async (req, res) => {
             return res.json({ status: 'added' });
         }
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Server error.' });
+        console.error('Wishlist Error:', err);
+        res.status(500).json({ error: 'Server error adding to wishlist.' });
     }
 });
 
@@ -33,7 +33,11 @@ router.get('/', authenticateToken, async (req, res) => {
             JOIN categories c ON p.category_id = c.id
             WHERE w.user_id = ?
         `, [req.user.id]);
-        res.json(rows);
+        res.json(rows.map(p => ({
+            ...p,
+            specs: typeof p.specs === 'string' ? JSON.parse(p.specs || '{}') : p.specs,
+            images: typeof p.images === 'string' ? JSON.parse(p.images || '[]') : p.images
+        })));
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Server error.' });

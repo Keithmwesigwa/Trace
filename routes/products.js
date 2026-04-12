@@ -41,7 +41,11 @@ router.get('/', async (req, res) => {
         );
 
         res.json({
-            products: rows,
+            products: rows.map(p => ({
+                ...p,
+                specs: typeof p.specs === 'string' ? JSON.parse(p.specs || '{}') : p.specs,
+                images: typeof p.images === 'string' ? JSON.parse(p.images || '[]') : p.images
+            })),
             pagination: {
                 total,
                 page: parseInt(page),

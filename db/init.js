@@ -8,6 +8,8 @@ async function initDB() {
         await db.query('SET FOREIGN_KEY_CHECKS = 0');
 
         console.log('Dropping existing tables...');
+        await db.query('DROP TABLE IF EXISTS wishlists');
+        await db.query('DROP TABLE IF EXISTS ratings');
         await db.query('DROP TABLE IF EXISTS products');
         await db.query('DROP TABLE IF EXISTS categories');
         await db.query('DROP TABLE IF EXISTS users');
