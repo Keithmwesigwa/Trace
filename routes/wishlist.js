@@ -9,6 +9,7 @@ router.post('/', authenticateToken, async (req, res) => {
     if (!productId || isNaN(productId)) return res.status(400).json({ error: 'Valid Product ID required.' });
     
     try {
+        console.log(`Wishlist toggle: User ${req.user.id}, Product ${productId}`);
         const [existing] = await db.query('SELECT id FROM wishlists WHERE user_id = ? AND product_id = ?', [req.user.id, productId]);
         if (existing.length > 0) {
             await db.query('DELETE FROM wishlists WHERE id = ?', [existing[0].id]);
@@ -19,7 +20,7 @@ router.post('/', authenticateToken, async (req, res) => {
         }
     } catch (err) {
         console.error('Wishlist Error:', err);
-        res.status(500).json({ error: 'Server error adding to wishlist.' });
+        res.status(500).json({ error: 'Server error processing wishlist.' });
     }
 });
 

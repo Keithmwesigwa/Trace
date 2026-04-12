@@ -10,13 +10,14 @@ router.post('/', authenticateToken, validate({
     comment: { required: true, minLength: 5 }
 }), async (req, res) => {
     const { score, comment } = req.body;
+    console.log(`Rating submission from User ${req.user.id}: Score ${score}`);
     try {
         await db.query('INSERT INTO ratings (user_id, score, comment) VALUES (?, ?, ?)', 
             [req.user.id, score, comment]);
         res.json({ message: 'Rating submitted. Thank you!' });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Server error.' });
+        console.error('Rating Error:', err);
+        res.status(500).json({ error: 'Server error saving rating.' });
     }
 });
 

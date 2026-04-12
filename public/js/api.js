@@ -24,8 +24,21 @@ const api = {
         });
 
         if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.error || 'API request failed');
+            const errorData = await response.json().catch(() => ({}));
+            const message = errorData.error || errorData.message || 'API request failed';
+            
+            if (response.status === 401 || response.status === 403) {
+                console.warn('Authentication error:', message);
+                // Optionally auto-logout on 401
+                if (window.location.pathname !== '/login.html') {
+                    alert('Session expired. Please log in again.');
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login.html';
+                }
+            }
+            
+            throw new Error(message);
         }
 
         return response.json();

@@ -8,6 +8,14 @@ const authenticateToken = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
+        
+        // Check if user still exists (handles stale sessions after DB reset)
+        const db = require('../config/db');
+        const [rows] = await db.query('SELECT id, role FROM users WHERE id = ?', [decoded.id]);
+        if (rows.length === 0) {
+            return res.status(401).json({ error: 'User no longer exists. Please re-login.' });
+        }
+
         req.user = decoded;
         next();
     } catch (err) {
