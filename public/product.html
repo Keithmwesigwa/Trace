@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Product Details - ShopSale</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body { padding-bottom: calc(85px + env(safe-area-inset-bottom, 16px)); }
+        
+        .swiper-area { width: 100%; height: 350px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; position: relative; }
+        .swiper-area img { max-width: 100%; max-height: 100%; object-fit: contain; padding: 2rem; }
+        
+        /* Floating Back button */
+        .back-btn { position: absolute; top: 1rem; left: 1rem; width: 40px; height: 40px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); z-index: 10; cursor: pointer; }
+
+        .details-sheet { background: var(--white); border-radius: 24px 24px 0 0; margin-top: -20px; position: relative; padding: 2rem 1.5rem; }
+        
+        .spec-item { display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
+        .spec-item .key { color: var(--text-muted); font-weight: 500; }
+        .spec-item .val { color: var(--text-main); font-weight: 600; text-align: right; max-width: 60%; }
+
+        .buy-action-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--white); border-top: 1px solid var(--border-color); padding: 1rem 1.5rem; padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: space-between; align-items: center; z-index: 999; box-shadow: 0 -4px 15px rgba(0,0,0,0.05); }
+        .buy-price { font-size: 1.5rem; font-weight: 800; color: var(--primary-dark); }
+        .buy-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; margin-bottom: 0.2rem; }
+    </style>
+</head>
+<body>
+    <div class="loader" id="loader" style="margin-top: 5rem;"></div>
+    
+    <div id="productContent" style="display: none;">
+        <div class="swiper-area">
+            <div class="back-btn" onclick="history.back()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            </div>
+            <img id="mainImage" src="" alt="">
+        </div>
+        
+        <div class="details-sheet container">
+            <div style="text-transform: uppercase; letter-spacing: 0.05em; color: var(--primary); font-weight: 700; font-size: 0.8rem; margin-bottom: 0.5rem;" id="prodBrand"></div>
+            <h1 id="prodTitle" style="font-size: 1.5rem; margin-bottom: 1.5rem;"></h1>
+            
+            <p id="prodDesc" style="font-size: 1rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 2rem;"></p>
+            
+            <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">Specifications</h3>
+            <div id="specsList" style="margin-bottom: 3rem;"></div>
+            
+            <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">You might also like</h3>
+            <div class="categories-scroll" id="relatedScroll"></div>
+        </div>
+
+        <div class="buy-action-bar">
+            <div>
+                <div class="buy-label">Fair Price verified</div>
+                <div class="buy-price" id="prodPrice"></div>
+            </div>
+            <button class="btn btn-primary" onclick="alert('Demo: Added to cart!')">Buy Now</button>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('id');
+            if(!id) return window.location.href = '/products.html';
+
+            const loader = document.getElementById('loader');
+            const content = document.getElementById('productContent');
+            loader.style.display = 'block';
+
+            try {
+                const data = await api.products.getById(id);
+                const p = data.product;
+                
+                document.title = `${p.name} - ShopSale`;
+                document.getElementById('prodBrand').textContent = p.brand;
+                document.getElementById('prodTitle').textContent = p.name;
+                document.getElementById('prodPrice').textContent = `$${parseFloat(p.price).toFixed(2)}`;
+                document.getElementById('prodDesc').textContent = p.description;
+                
+                const mainImg = p.images && p.images.length > 0 ? p.images[0] : 'https://via.placeholder.com/600?text=No+Image';
+                document.getElementById('mainImage').src = mainImg;
+
+                const specsList = document.getElementById('specsList');
+                if (p.specs && Object.keys(p.specs).length > 0) {
+                    for (const [key, value] of Object.entries(p.specs)) {
+                        specsList.innerHTML += `<div class="spec-item"><span class="key">${key.toUpperCase()}</span><span class="val">${value}</span></div>`;
+                    }
+                }
+
+                const related = document.getElementById('relatedScroll');
+                data.related.forEach(rp => {
+                    const rImg = rp.images && rp.images.length > 0 ? rp.images[0] : 'https://via.placeholder.com/300';
+                    related.innerHTML += `
+                        <a href="/product.html?id=${rp.id}" class="product-card" style="width: 140px; flex: 0 0 auto; scroll-snap-align: start;">
+                            <div class="product-image-wrap" style="height: 120px; padding: 0.5rem;"><img src="${rImg}"></div>
+                            <div class="product-info" style="padding: 0.5rem;">
+                                <div class="product-title" style="font-size:0.8rem; -webkit-line-clamp: 1;">${rp.name}</div>
+                                <div class="product-price" style="font-size:0.9rem;">$${parseFloat(rp.price).toFixed(2)}</div>
+                            </div>
+                        </a>
+                    `;
+                });
+
+                loader.style.display = 'none';
+                content.style.display = 'block';
+            } catch (err) {
+                loader.style.display = 'none';
+                alert('Failed to load product.');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Shop - ShopSale</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .filter-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .filter-pills { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: 1rem; }
+        .filter-pills::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container nav-container">
+            <a href="/" class="logo">ShopSale</a>
+            <nav class="nav-links">
+                <a href="/products.html">All Products</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="mobile-header" style="justify-content: flex-start; gap: 1rem;">
+        <a href="/" style="color: var(--text-main);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        </a>
+        <h1 style="font-size: 1.25rem;">Browse</h1>
+    </div>
+
+    <main class="container">
+        <form class="search-container" id="navSearch" style="margin-top: 1rem;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="navSearchInput" placeholder="Search gadgets...">
+        </form>
+
+        <div class="filter-header">
+            <div style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted);" id="resultsCount">Loading...</div>
+            <select class="form-control" style="width: auto; padding: 0.5rem; font-size: 0.85rem; border-radius: var(--radius-full);" id="sortSelect" onchange="updateFilters()">
+                <option value="newest">Newest</option>
+                <option value="price_asc">Price Low</option>
+                <option value="price_desc">Price High</option>
+            </select>
+        </div>
+
+        <div class="filter-pills" id="categoryPills">
+            <!-- Dynamic Categories -->
+        </div>
+
+        <div class="loader" id="loader"></div>
+        <div class="product-grid" id="productsGrid" style="margin-bottom: 2rem;"></div>
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="/" class="bottom-nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            Home
+        </a>
+        <a href="/products.html" class="bottom-nav-item active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+            Shop
+        </a>
+        <a href="/login.html" class="bottom-nav-item" id="mobileProfileBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            Profile
+        </a>
+    </nav>
+
+    <script src="/js/api.js"></script>
+    <script>
+        let currentFilters = { page: 1 };
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (user) {
+                const profileBtn = document.getElementById('mobileProfileBtn');
+                profileBtn.href = "#";
+                profileBtn.onclick = (e) => { e.preventDefault(); if(confirm('Logout?')){ localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.reload(); }};
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('search')) currentFilters.search = urlParams.get('search');
+            if (urlParams.get('category')) currentFilters.category = urlParams.get('category');
+            if (currentFilters.search) document.getElementById('navSearchInput').value = currentFilters.search;
+
+            document.getElementById('navSearch').addEventListener('submit', (e) => {
+                e.preventDefault();
+                currentFilters.search = document.getElementById('navSearchInput').value;
+                loadProducts();
+            });
+
+            // Load Categories as Mobile Pills
+            const cats = await api.categories.getAll();
+            const catContainer = document.getElementById('categoryPills');
+            catContainer.innerHTML = `<button class="category-pill ${!currentFilters.category ? 'active' : ''}" onclick="setCat('')">All</button>`;
+            cats.forEach(c => {
+                catContainer.innerHTML += `<button class="category-pill ${currentFilters.category === c.name ? 'active' : ''}" onclick="setCat('${c.name}')">${c.name}</button>`;
+            });
+
+            loadProducts();
+        });
+
+        window.setCat = function(name) {
+            currentFilters.category = name;
+            Array.from(document.querySelectorAll('.category-pill')).forEach(el => {
+                el.classList.toggle('active', (name === '' && el.innerText === 'All') || el.innerText === name);
+            });
+            loadProducts();
+        };
+
+        window.updateFilters = function() {
+            currentFilters.sort = document.getElementById('sortSelect').value;
+            loadProducts();
+        };
+
+        async function loadProducts() {
+            const loader = document.getElementById('loader');
+            const grid = document.getElementById('productsGrid');
+            loader.style.display = 'block';
+            grid.innerHTML = '';
+            
+            try {
+                const data = await api.products.getAll(currentFilters);
+                loader.style.display = 'none';
+                
+                document.getElementById('resultsCount').innerText = `${data.pagination.total} items`;
+
+                if (data.products.length === 0) {
+                    grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding:2rem 0; color:var(--text-muted);">No items found.</p>';
+                    return;
+                }
+
+                data.products.forEach(p => {
+                    const img = p.images && p.images.length > 0 ? p.images[0] : 'https://via.placeholder.com/300?text=No+Image';
+                    grid.innerHTML += `
+                        <a href="/product.html?id=${p.id}" class="product-card">
+                            <div class="product-image-wrap">
+                                <img src="${img}" alt="${p.name}">
+                            </div>
+                            <div class="product-info">
+                                <div class="brand-text">${p.brand}</div>
+                                <div class="product-title">${p.name}</div>
+                                <div class="product-price">$${parseFloat(p.price).toFixed(2)}</div>
+                            </div>
+                        </a>
+                    `;
+                });
+            } catch (err) {
+                loader.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>

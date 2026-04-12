@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - ShopSale</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .admin-layout { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+        .sidebar { background: var(--white); border-right: 1px solid var(--border-color); padding: 2rem; }
+        .content { padding: 2rem; background: var(--bg-color); }
+        .nav-item { display: block; padding: 0.75rem 1rem; color: var(--text-muted); font-weight: 500; border-radius: var(--radius-md); margin-bottom: 0.5rem; transition: background 0.2s; }
+        .nav-item:hover, .nav-item.active { background: var(--primary-light); color: var(--primary-dark); }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 100; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--white); padding: 2rem; border-radius: var(--radius-lg); width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+        .specs-editor { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .action-flex { display: flex; gap: 0.5rem; }
+    </style>
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <a href="/" class="logo" style="margin-bottom: 3rem;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                Shop Admin
+            </a>
+            <nav>
+                <a href="#products" class="nav-item active">Products</a>
+                <a href="#" onclick="logout(); return false;" class="nav-item">Logout</a>
+            </nav>
+        </aside>
+
+        <main class="content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h1>Products Manager</h1>
+                <button class="btn btn-primary" onclick="openModal()">+ Add Product</button>
+            </div>
+
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="productsTableBody">
+                    <!-- Populated via JS -->
+                </tbody>
+            </table>
+        </main>
+    </div>
+
+    <!-- Add/Edit Product Modal -->
+    <div class="modal" id="productModal">
+        <div class="modal-content">
+            <h2 id="modalTitle" style="margin-bottom: 1.5rem;">Add Product</h2>
+            <form id="productForm">
+                <input type="hidden" id="productId">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" class="form-control" id="pName" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Brand</label>
+                        <input type="text" class="form-control" id="pBrand" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select class="form-control" id="pCategory" required></select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Price</label>
+                    <input type="number" step="0.01" class="form-control" id="pPrice" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea class="form-control" id="pDesc" rows="3" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Product Image</label>
+                    <input type="file" id="pImage" accept="image/*" class="form-control" style="padding-bottom: 2rem;">
+                    <input type="hidden" id="pImageUrl">
+                    <div id="imagePreview" style="margin-top: 1rem; height: 100px; display: none;">
+                        <img src="" style="height: 100%; border-radius: var(--radius-md); object-fit: contain;">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Specifications JSON</label>
+                    <textarea class="form-control" id="pSpecs" rows="3" placeholder='{"cpu": "M3", "ram": "16GB"}'></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
+                    <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="saveBtn">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        // Check Admin
+        const user = JSON.parse(localStorage.getItem('user') || 'null');
+        if (!user || user.role !== 'admin') {
+            window.location.href = '/login.html';
+        }
+
+        let allProducts = [];
+
+        async function loadData() {
+            const [productsRes, cats] = await Promise.all([
+                api.products.getAll({ limit: 100 }), // simple admin view without pagination for now
+                api.categories.getAll()
+            ]);
+
+            allProducts = productsRes.products;
+            const tbody = document.getElementById('productsTableBody');
+            tbody.innerHTML = '';
+            
+            allProducts.forEach(p => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>#${p.id}</td>
+                        <td><div style="font-weight:600">${p.name}</div><div style="font-size:0.8rem;color:var(--text-muted)">${p.brand}</div></td>
+                        <td>${p.category_name}</td>
+                        <td>$${parseFloat(p.price).toFixed(2)}</td>
+                        <td>
+                            <div class="action-flex">
+                                <button class="btn btn-outline" style="padding: 0.25rem 0.75rem; font-size:0.8rem" onclick="editProduct(${p.id})">Edit</button>
+                                <button class="btn btn-outline" style="padding: 0.25rem 0.75rem; font-size:0.8rem; border-color: red; color: red;" onclick="deleteProduct(${p.id})">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            const catSelect = document.getElementById('pCategory');
+            catSelect.innerHTML = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        }
+
+        document.getElementById('pImage').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true;
+            btn.textContent = 'Uploading image...';
+            try {
+                const res = await api.upload(file);
+                document.getElementById('pImageUrl').value = res.url;
+                const preview = document.getElementById('imagePreview');
+                preview.style.display = 'block';
+                preview.querySelector('img').src = res.url;
+            } catch (err) {
+                alert('Image upload failed');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save Product';
+            }
+        });
+
+        document.getElementById('productForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            let specsStr = document.getElementById('pSpecs').value || '{}';
+            let specsObj;
+            try { specsObj = JSON.parse(specsStr); } catch(ex) { return alert('Specs must be valid JSON'); }
+
+            const payload = {
+                name: document.getElementById('pName').value,
+                brand: document.getElementById('pBrand').value,
+                category_id: document.getElementById('pCategory').value,
+                price: parseFloat(document.getElementById('pPrice').value),
+                description: document.getElementById('pDesc').value,
+                specs: specsObj,
+                images: document.getElementById('pImageUrl').value ? [document.getElementById('pImageUrl').value] : []
+            };
+
+            const id = document.getElementById('productId').value;
+            try {
+                if (id) {
+                    await api.products.update(id, payload);
+                } else {
+                    await api.products.create(payload);
+                }
+                closeModal();
+                loadData();
+            } catch (err) {
+                alert(err.message);
+            }
+        });
+
+        async function deleteProduct(id) {
+            if(confirm('Are you sure you want to delete this product?')) {
+                await api.products.delete(id);
+                loadData();
+            }
+        }
+
+        function editProduct(id) {
+            const p = allProducts.find(x => x.id === id);
+            if (!p) return;
+            document.getElementById('modalTitle').textContent = 'Edit Product';
+            document.getElementById('productId').value = p.id;
+            document.getElementById('pName').value = p.name;
+            document.getElementById('pBrand').value = p.brand;
+            document.getElementById('pCategory').value = p.category_id;
+            document.getElementById('pPrice').value = p.price;
+            document.getElementById('pDesc').value = p.description;
+            document.getElementById('pSpecs').value = JSON.stringify(p.specs || {});
+            
+            if (p.images && p.images.length > 0) {
+                document.getElementById('pImageUrl').value = p.images[0];
+                const preview = document.getElementById('imagePreview');
+                preview.style.display = 'block';
+                preview.querySelector('img').src = p.images[0];
+            } else {
+                document.getElementById('pImageUrl').value = '';
+                document.getElementById('imagePreview').style.display = 'none';
+            }
+            
+            document.getElementById('productModal').classList.add('active');
+        }
+
+        function openModal() {
+            document.getElementById('modalTitle').textContent = 'Add Product';
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+            document.getElementById('imagePreview').style.display = 'none';
+            document.getElementById('productModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('productModal').classList.remove('active');
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/login.html';
+        }
+
+        document.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html>

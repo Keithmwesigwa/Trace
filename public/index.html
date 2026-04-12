@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ShopSale</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- Desktop Header -->
+    <header>
+        <div class="container nav-container">
+            <a href="/" class="logo">ShopSale</a>
+            <nav class="nav-links">
+                <a href="/products.html">All Products</a>
+            </nav>
+            <div class="account-wrapper" id="desktopAccount">
+                <div class="account-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </div>
+                <div class="account-dropdown" id="accountDropdown">
+                    <!-- Dynamic Content -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+        <h1 style="font-size: 1.5rem; color: var(--primary);">ShopSale</h1>
+        <div id="topAuth">
+            <a href="/login.html" style="font-size: 0.9rem; font-weight: 600; color: var(--primary);">Login</a>
+        </div>
+    </div>
+
+    <main class="container">
+        <div style="margin: 1.5rem 0 1rem;">
+            <h2 style="margin-bottom: 0.5rem; font-size: 1.25rem;">Find fair prices.</h2>
+            <p style="font-size: 0.9rem;">We track true market values so you save money.</p>
+        </div>
+
+        <form class="search-container" id="homeSearch">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="searchInput" placeholder="Search gadgets..." required>
+        </form>
+
+        <div class="categories-scroll" id="homeCategories">
+            <a href="/products.html" class="category-pill active">Everything</a>
+            <a href="/products.html?category=Laptops" class="category-pill">Laptops</a>
+            <a href="/products.html?category=Phones" class="category-pill">Phones</a>
+            <a href="/products.html?category=Accessories" class="category-pill">Accessories</a>
+        </div>
+
+        <div style="margin-top: 2rem;">
+            <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">Trending Now</h3>
+            <div class="product-grid" id="featuredProducts"></div>
+            <div class="loader" id="loader"></div>
+        </div>
+    </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="bottom-nav">
+        <a href="/" class="bottom-nav-item active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            Home
+        </a>
+        <a href="/products.html" class="bottom-nav-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+            Shop
+        </a>
+        <a href="/login.html" class="bottom-nav-item" id="mobileProfileBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            Profile
+        </a>
+    </nav>
+
+    <script src="/js/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = JSON.parse(localStorage.getItem('user'));
+            if (user) {
+                document.getElementById('topAuth').innerHTML = user.role === 'admin' 
+                    ? `<a href="/admin/index.html" style="font-size:0.9rem; font-weight:600; color:var(--primary);">Admin</a>`
+                    : '';
+                
+                // Desktop Dropdown for Logged In
+                document.getElementById('accountDropdown').innerHTML = `
+                    <div class="dropdown-header">
+                        <span>Welcome back,</span>
+                        <strong>${user.name}</strong>
+                    </div>
+                    ${user.role === 'admin' ? '<a href="/admin/index.html" class="dropdown-link">Admin Dashboard</a>' : ''}
+                    <a href="#" class="dropdown-link" id="logoutBtn">Logout</a>
+                `;
+                document.getElementById('logoutBtn').onclick = (e) => {
+                    e.preventDefault();
+                    if(confirm('Logout?')){ localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.reload(); }
+                };
+
+                const profileBtn = document.getElementById('mobileProfileBtn');
+                profileBtn.href = "#";
+                profileBtn.onclick = (e) => { e.preventDefault(); if(confirm('Logout?')){ localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.reload(); }};
+            } else {
+                // Desktop Dropdown for Guest
+                document.getElementById('accountDropdown').innerHTML = `
+                    <div class="dropdown-header">
+                        <span>My Account</span>
+                        <strong>Sign in to shop</strong>
+                    </div>
+                    <a href="/login.html" class="dropdown-link">Sign In</a>
+                `;
+            }
+
+            document.getElementById('homeSearch').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const q = document.getElementById('searchInput').value;
+                window.location.href = `/products.html?search=${encodeURIComponent(q)}`;
+            });
+
+            const loader = document.getElementById('loader');
+            loader.style.display = 'block';
+            try {
+                const data = await api.products.getAll({ limit: 4 });
+                const grid = document.getElementById('featuredProducts');
+                loader.style.display = 'none';
+
+                data.products.forEach(p => {
+                    const img = p.images && p.images.length > 0 ? p.images[0] : 'https://via.placeholder.com/300?text=No+Image';
+                    grid.innerHTML += `
+                        <a href="/product.html?id=${p.id}" class="product-card">
+                            <div class="product-image-wrap">
+                                <img src="${img}" alt="${p.name}">
+                            </div>
+                            <div class="product-info">
+                                <div class="brand-text">${p.brand}</div>
+                                <div class="product-title">${p.name}</div>
+                                <div class="product-price">$${typeof p.price === 'string' ? parseFloat(p.price).toFixed(2) : p.price}</div>
+                            </div>
+                        </a>
+                    `;
+                });
+            } catch (err) {
+                loader.style.display = 'none';
+                console.error(err);
+            }
+        });
+    </script>
+</body>
+</html>
