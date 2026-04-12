@@ -94,8 +94,12 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Specifications JSON</label>
-                    <textarea class="form-control" id="pSpecs" rows="3" placeholder='{"cpu": "M3", "ram": "16GB"}'></textarea>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <label style="margin-bottom: 0;">Specifications</label>
+                        <button type="button" class="btn btn-outline" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;" onclick="loadPresets()">Load Presets</button>
+                    </div>
+                    <div id="specsContainer"></div>
+                    <button type="button" class="btn btn-outline" style="width: 100%; margin-top: 0.5rem; font-size: 0.85rem;" onclick="addSpecRow()">+ Add Specification</button>
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
@@ -147,6 +151,54 @@
             catSelect.innerHTML = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
         }
 
+        // --- Specifications Manager Logic ---
+        function addSpecRow(key = '', value = '') {
+            const container = document.getElementById('specsContainer');
+            const row = document.createElement('div');
+            row.className = 'specs-editor';
+            row.innerHTML = `
+                <input type="text" class="form-control spec-key" placeholder="Key (e.g. RAM)" value="${key}">
+                <input type="text" class="form-control spec-value" placeholder="Value (e.g. 16GB)" value="${value}">
+                <button type="button" class="btn btn-outline" onclick="this.parentElement.remove()" style="color:red; border-color:red; padding: 0 0.5rem">×</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function getSpecsFromUI() {
+            const specs = {};
+            document.querySelectorAll('.specs-editor').forEach(row => {
+                const key = row.querySelector('.spec-key').value.trim();
+                const value = row.querySelector('.spec-value').value.trim();
+                if (key) specs[key] = value;
+            });
+            return specs;
+        }
+
+        function setSpecsInUI(specsObj) {
+            const container = document.getElementById('specsContainer');
+            container.innerHTML = '';
+            if (!specsObj) return;
+            Object.entries(specsObj).forEach(([key, val]) => {
+                addSpecRow(key, val);
+            });
+        }
+
+        function loadPresets() {
+            const catSelect = document.getElementById('pCategory');
+            const categoryName = catSelect.options[catSelect.selectedIndex]?.text.toLowerCase() || '';
+            
+            const presets = {
+                'laptops': ['CPU', 'RAM', 'Storage', 'Screen', 'Battery'],
+                'phones': ['Screen', 'Processor', 'Battery', 'Camera', 'Storage'],
+                'accessories': ['Type', 'Connectivity', 'Compatibility'],
+                'power banks': ['Capacity', 'Ports', 'Input']
+            };
+
+            const fields = presets[categoryName] || ['Feature', 'Detail'];
+            fields.forEach(f => addSpecRow(f, ''));
+        }
+        // ------------------------------------
+
         document.getElementById('pImage').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -170,9 +222,7 @@
         document.getElementById('productForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            let specsStr = document.getElementById('pSpecs').value || '{}';
-            let specsObj;
-            try { specsObj = JSON.parse(specsStr); } catch(ex) { return alert('Specs must be valid JSON'); }
+            const specsObj = getSpecsFromUI();
 
             const payload = {
                 name: document.getElementById('pName').value,
@@ -215,7 +265,7 @@
             document.getElementById('pCategory').value = p.category_id;
             document.getElementById('pPrice').value = p.price;
             document.getElementById('pDesc').value = p.description;
-            document.getElementById('pSpecs').value = JSON.stringify(p.specs || {});
+            setSpecsInUI(p.specs);
             
             if (p.images && p.images.length > 0) {
                 document.getElementById('pImageUrl').value = p.images[0];
@@ -235,6 +285,7 @@
             document.getElementById('productForm').reset();
             document.getElementById('productId').value = '';
             document.getElementById('imagePreview').style.display = 'none';
+            document.getElementById('specsContainer').innerHTML = ''; // Clear specs for new product
             document.getElementById('productModal').classList.add('active');
         }
 
