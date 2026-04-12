@@ -75,8 +75,8 @@
             const user = JSON.parse(localStorage.getItem('user'));
             if (user) {
                 const profileBtn = document.getElementById('mobileProfileBtn');
-                profileBtn.href = "#";
-                profileBtn.onclick = (e) => { e.preventDefault(); if(confirm('Logout?')){ localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.reload(); }};
+                profileBtn.href = "/profile.html";
+                profileBtn.onclick = null;
             }
 
             const urlParams = new URLSearchParams(window.location.search);
