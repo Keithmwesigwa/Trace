@@ -61,7 +61,16 @@
                     <label>Contact Number</label>
                     <input type="text" class="form-control" name="contact" placeholder="+256..." required>
                 </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%;">Create Account</button>
+                <div class="form-group">
+                    <label>Account Type</label>
+                    <select class="form-control" name="role" id="roleSelect">
+                        <option value="user">Customer</option>
+                        <option value="vendor">Vendor Shop</option>
+                    </select>
+                </div>
+                <input type="hidden" name="latitude" id="regLat">
+                <input type="hidden" name="longitude" id="regLng">
+                <button type="submit" class="btn btn-primary" id="regBtn" style="width: 100%;">Create Account</button>
                 <p id="regErr" style="color: red; margin-top: 1rem; text-align: center; display: none;"></p>
             </form>
         </div>
@@ -83,7 +92,8 @@
                 const res = await api.auth.login(data);
                 localStorage.setItem('token', res.token);
                 localStorage.setItem('user', JSON.stringify(res.user));
-                window.location.href = res.user.role === 'admin' ? '/admin/index.html' : '/';
+                const role = res.user.role;
+                window.location.href = role === 'admin' ? '/admin/index.html' : role === 'vendor' ? '/vendor/index.html' : '/';
             } catch (err) {
                 const errEl = document.getElementById('loginErr');
                 errEl.textContent = err.message;
@@ -93,16 +103,49 @@
 
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const data = Object.fromEntries(new FormData(e.target));
-            try {
-                const res = await api.auth.register(data);
-                localStorage.setItem('token', res.token);
-                localStorage.setItem('user', JSON.stringify(res.user));
-                window.location.href = '/';
-            } catch (err) {
-                const errEl = document.getElementById('regErr');
-                errEl.textContent = err.message;
-                errEl.style.display = 'block';
+            const btn = document.getElementById('regBtn');
+            const role = document.getElementById('roleSelect').value;
+            const errEl = document.getElementById('regErr');
+            errEl.style.display = 'none';
+            btn.disabled = true;
+
+            const submitForm = async (lat = null, lng = null) => {
+                const data = Object.fromEntries(new FormData(e.target));
+                if (lat) data.latitude = lat;
+                if (lng) data.longitude = lng;
+                try {
+                    const res = await api.auth.register(data);
+                    localStorage.setItem('token', res.token);
+                    localStorage.setItem('user', JSON.stringify(res.user));
+                    window.location.href = res.user.role === 'vendor' ? '/vendor/index.html' : '/';
+                } catch (err) {
+                    errEl.textContent = err.message;
+                    errEl.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = 'Create Account';
+                }
+            };
+
+            if (role === 'vendor') {
+                btn.textContent = 'Getting Location...';
+                if (!navigator.geolocation) {
+                    errEl.textContent = 'Geolocation is not supported by your browser.';
+                    errEl.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = 'Create Account';
+                    return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => submitForm(pos.coords.latitude, pos.coords.longitude),
+                    (err) => {
+                        errEl.textContent = 'We need your location to list your shop.';
+                        errEl.style.display = 'block';
+                        btn.disabled = false;
+                        btn.textContent = 'Create Account';
+                    }
+                );
+            } else {
+                submitForm();
             }
         });
     </script>

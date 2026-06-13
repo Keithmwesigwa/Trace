@@ -13,19 +13,24 @@ router.post('/register', validate({
     password: { required: true, minLength: 6 },
     contact: { required: true, minLength: 8, maxLength: 20 }
 }), async (req, res) => {
-    const { name, email, password, contact } = req.body;
+    const { name, email, password, contact, role, latitude, longitude } = req.body;
+    const finalRole = role === 'vendor' ? 'vendor' : 'user';
+    const lat = latitude ? parseFloat(latitude) : null;
+    const lng = longitude ? parseFloat(longitude) : null;
+
     try {
         const [existing] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
         if (existing.length > 0) return res.status(409).json({ error: 'Email already registered.' });
         
         const hashed = await bcrypt.hash(password, 12);
         const [result] = await db.query(
-            'INSERT INTO users (name, email, password, contact, role) VALUES (?, ?, ?, ?, ?)',
-            [name, email, hashed, contact, 'user']
+            'INSERT INTO users (name, email, password, contact, role, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [name, email, hashed, contact, finalRole, lat, lng]
         );
         
-        const token = jwt.sign({ id: result.insertId, name, email, role: 'user' }, JWT_SECRET, { expiresIn: '7d' });
-        res.status(201).json({ token, user: { id: result.insertId, name, email, role: 'user' } });
+        const userObj = { id: result.insertId, name, email, role: finalRole };
+        const token = jwt.sign(userObj, JWT_SECRET, { expiresIn: '7d' });
+        res.status(201).json({ token, user: userObj });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Server error.' });

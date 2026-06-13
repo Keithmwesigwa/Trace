@@ -8,6 +8,8 @@ async function initDB() {
         await db.query('SET FOREIGN_KEY_CHECKS = 0');
 
         console.log('Dropping existing tables...');
+        await db.query('DROP TABLE IF EXISTS orders');
+        await db.query('DROP TABLE IF EXISTS vendor_inventory');
         await db.query('DROP TABLE IF EXISTS wishlists');
         await db.query('DROP TABLE IF EXISTS ratings');
         await db.query('DROP TABLE IF EXISTS products');
@@ -22,7 +24,9 @@ async function initDB() {
                 email VARCHAR(150) UNIQUE,
                 password VARCHAR(255),
                 contact VARCHAR(20),
-                role ENUM('user','admin') DEFAULT 'user',
+                role ENUM('user','vendor','admin') DEFAULT 'user',
+                latitude DECIMAL(10, 8),
+                longitude DECIMAL(11, 8),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `);
@@ -49,6 +53,38 @@ async function initDB() {
                 images JSON,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (category_id) REFERENCES categories(id)
+            )
+        `);
+
+        console.log('Creating vendor_inventory table...');
+        await db.query(`
+            CREATE TABLE vendor_inventory (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                vendor_id INT,
+                product_id INT,
+                stock INT DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (vendor_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+                UNIQUE KEY (vendor_id, product_id)
+            )
+        `);
+
+        console.log('Creating orders table...');
+        await db.query(`
+            CREATE TABLE orders (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT,
+                product_id INT,
+                status ENUM('pending', 'accepted', 'completed', 'cancelled') DEFAULT 'pending',
+                vendor_id INT NULL,
+                user_lat DECIMAL(10, 8),
+                user_lng DECIMAL(11, 8),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+                FOREIGN KEY (vendor_id) REFERENCES users(id) ON DELETE SET NULL
             )
         `);
 
@@ -82,6 +118,10 @@ async function initDB() {
         const hashed = await bcrypt.hash('Admin1234!', 12);
         await db.query('INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)', 
             ['Admin', 'admin@shop.com', hashed, 'admin']);
+        
+        // Sample Vendor
+        await db.query('INSERT INTO users (name, email, password, contact, role, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+            ['Kampala Electronics', 'vendor@shop.com', hashed, '+256700000000', 'vendor', 0.347596, 32.582520]); // Example coordinates in Kampala
 
         // Categories
         await db.query("INSERT INTO categories (name, icon) VALUES ('Laptops', '💻'), ('Phones', '📱'), ('Power Banks', '🔋'), ('Accessories', '🎧')");
@@ -91,7 +131,7 @@ async function initDB() {
         const phoneCatId = cats.find(c => c.name === 'Phones').id;
         const laptopCatId = cats.find(c => c.name === 'Laptops').id;
 
-        await db.query(`
+        const [productResult] = await db.query(`
             INSERT INTO products (name, brand, category_id, price, description, specs, images)
             VALUES 
             (?, ?, ?, ?, ?, ?, ?),
@@ -107,6 +147,11 @@ async function initDB() {
             JSON.stringify({ cpu: 'Intel Core i7-1355U', ram: '16GB LPDDR5', storage: '512GB SSD', screen: '14" WUXGA' }), 
             JSON.stringify([])
         ]);
+
+        // Add iPhone to sample vendor's inventory
+        const vendorId = 2; // Kampala Electronics
+        const firstProductId = productResult.insertId; // First product is iPhone
+        await db.query('INSERT INTO vendor_inventory (vendor_id, product_id, stock) VALUES (?, ?, ?)', [vendorId, firstProductId, 5]);
 
         console.log('Enabling foreign key checks...');
         await db.query('SET FOREIGN_KEY_CHECKS = 1');

@@ -23,6 +23,8 @@ app.use('/api/products', require('./routes/products'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/wishlist', require('./routes/wishlist'));
 app.use('/api/ratings', require('./routes/ratings'));
+app.use('/api/vendor', require('./routes/vendor'));
+app.use('/api/orders', require('./routes/orders'));
 
 // Fallback to index.html for unknown HTML/Navigation requests (SPA support)
 app.get('*', (req, res) => {

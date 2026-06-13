@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Dashboard - Trace</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .vendor-layout { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+        .sidebar { background: var(--white); border-right: 1px solid var(--border-color); padding: 2rem; }
+        .content { padding: 2rem; background: var(--bg-color); }
+        .nav-item { display: block; padding: 0.75rem 1rem; color: var(--text-muted); font-weight: 500; border-radius: var(--radius-md); margin-bottom: 0.5rem; transition: background 0.2s; }
+        .nav-item:hover, .nav-item.active { background: var(--primary-light); color: var(--primary-dark); }
+        .order-card { background: var(--white); padding: 1.5rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--primary); }
+        .order-pulse { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(108, 92, 231, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(108, 92, 231, 0); } 100% { box-shadow: 0 0 0 0 rgba(108, 92, 231, 0); } }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1.5rem; }
+    </style>
+</head>
+<body>
+    <div class="vendor-layout">
+        <aside class="sidebar">
+            <a href="/" class="logo" style="margin-bottom: 3rem;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                Vendor Shop
+            </a>
+            <nav>
+                <a href="#orders" class="nav-item active" onclick="switchVendorTab('orders')">Live Orders <span id="orderCount" style="background: red; color: white; border-radius: 50%; padding: 0.1rem 0.5rem; font-size: 0.8rem; margin-left: 0.5rem; display: none;">0</span></a>
+                <a href="#inventory" class="nav-item" onclick="switchVendorTab('inventory')">My Inventory</a>
+                <a href="#history" class="nav-item" onclick="switchVendorTab('history')">Order History</a>
+                <a href="#" onclick="logout(); return false;" class="nav-item">Logout</a>
+            </nav>
+        </aside>
+
+        <main class="content">
+            <!-- LIVE ORDERS PANEL -->
+            <div id="ordersPanel">
+                <h1 style="margin-bottom: 2rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="width: 12px; height: 12px; background: #4cd137; border-radius: 50%; display: inline-block; animation: pulse 2s infinite;"></span>
+                    Live Order Requests
+                </h1>
+                <div id="liveOrdersContainer">
+                    <p>Scanning for nearby orders...</p>
+                </div>
+            </div>
+
+            <!-- INVENTORY PANEL -->
+            <div id="inventoryPanel" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h1>My Store Inventory</h1>
+                </div>
+                
+                <h3 style="margin-bottom: 1rem;">Products in My Store</h3>
+                <div class="product-grid" id="myInventoryGrid" style="margin-bottom: 3rem;"></div>
+                
+                <h3 style="margin-bottom: 1rem; padding-top: 2rem; border-top: 1px solid var(--border-color);">Add Products from Global Database</h3>
+                <div class="product-grid" id="globalProductsGrid"></div>
+            </div>
+
+            <!-- HISTORY PANEL -->
+            <div id="historyPanel" style="display: none;">
+                <h1 style="margin-bottom: 2rem;">Order History</h1>
+                <div id="historyContainer"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/js/api.js?v=2"></script>
+    <script>
+        const user = JSON.parse(localStorage.getItem('user') || 'null');
+        if (!user || user.role !== 'vendor') {
+            window.location.href = '/login.html';
+        }
+
+        let pollInterval;
+
+        function switchVendorTab(tab) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.querySelector(`.nav-item[href="#${tab}"]`).classList.add('active');
+            
+            document.getElementById('ordersPanel').style.display = tab === 'orders' ? 'block' : 'none';
+            document.getElementById('inventoryPanel').style.display = tab === 'inventory' ? 'block' : 'none';
+            document.getElementById('historyPanel').style.display = tab === 'history' ? 'block' : 'none';
+
+            if (tab === 'inventory') loadInventory();
+            if (tab === 'history') loadHistory();
+        }
+
+        async function loadInventory() {
+            try {
+                const [myInv, globalProducts] = await Promise.all([
+                    api.vendor.getInventory(),
+                    api.products.getAll({ limit: 100 })
+                ]);
+
+                // My Inventory
+                const myGrid = document.getElementById('myInventoryGrid');
+                myGrid.innerHTML = myInv.map(p => `
+                    <div class="product-card" style="padding: 1rem; background: var(--white); border-radius: var(--radius-md);">
+                        <img src="${p.images?.[0] || '/img/placeholder.jpg'}" alt="${p.name}" style="width:100%; height:150px; object-fit:contain; margin-bottom: 1rem;">
+                        <h4 style="margin:0 0 0.5rem 0">${p.name}</h4>
+                        <div style="color:var(--primary); font-weight:600; margin-bottom: 1rem;">${formatPrice(p.price)}</div>
+                        <button class="btn btn-outline" style="width:100%; border-color: red; color: red;" onclick="removeFromInventory(${p.product_id})">Remove</button>
+                    </div>
+                `).join('');
+                if (myInv.length === 0) myGrid.innerHTML = '<p>Your store is empty. Add products below.</p>';
+
+                // Global Products (exclude ones already in inventory)
+                const myProductIds = new Set(myInv.map(i => i.product_id));
+                const available = globalProducts.products.filter(p => !myProductIds.has(p.id));
+                
+                const globalGrid = document.getElementById('globalProductsGrid');
+                globalGrid.innerHTML = available.map(p => `
+                    <div class="product-card" style="padding: 1rem; background: var(--white); border-radius: var(--radius-md);">
+                        <img src="${p.images?.[0] || '/img/placeholder.jpg'}" alt="${p.name}" style="width:100%; height:150px; object-fit:contain; margin-bottom: 1rem;">
+                        <h4 style="margin:0 0 0.5rem 0">${p.name}</h4>
+                        <div style="color:var(--primary); font-weight:600; margin-bottom: 1rem;">${formatPrice(p.price)}</div>
+                        <button class="btn btn-primary" style="width:100%;" onclick="addToInventory(${p.id})">+ Add to Store</button>
+                    </div>
+                `).join('');
+                
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function addToInventory(productId) {
+            try {
+                await api.vendor.addToInventory(productId, 5); // Default stock 5
+                loadInventory();
+            } catch (err) { alert(err.message); }
+        }
+
+        async function removeFromInventory(productId) {
+            try {
+                await api.vendor.removeFromInventory(productId);
+                loadInventory();
+            } catch (err) { alert(err.message); }
+        }
+
+        async function loadHistory() {
+            try {
+                const orders = await api.orders.getMyOrders();
+                const container = document.getElementById('historyContainer');
+                container.innerHTML = orders.map(o => `
+                    <div style="background: var(--white); padding: 1.5rem; border-radius: var(--radius-lg); margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                            <span style="font-weight: 600;">Order #${o.id} - ${o.product_name}</span>
+                            <span style="color: var(--primary); font-weight: 600;">${formatPrice(o.price)}</span>
+                        </div>
+                        <div style="color: var(--text-muted); font-size: 0.9rem;">
+                            <div>Status: <strong style="text-transform: capitalize;">${o.status}</strong></div>
+                            <div>Customer: ${o.customer_name} (${o.customer_contact})</div>
+                            <div>Date: ${new Date(o.created_at).toLocaleString()}</div>
+                        </div>
+                    </div>
+                `).join('');
+                if (orders.length === 0) container.innerHTML = '<p>No past orders.</p>';
+            } catch(e) { console.error(e); }
+        }
+
+        async function pollOrders() {
+            try {
+                const orders = await api.orders.getNearby();
+                const container = document.getElementById('liveOrdersContainer');
+                const countBadge = document.getElementById('orderCount');
+                
+                if (orders.length > 0) {
+                    countBadge.style.display = 'inline-block';
+                    countBadge.textContent = orders.length;
+                    
+                    container.innerHTML = orders.map(o => `
+                        <div class="order-card order-pulse">
+                            <div>
+                                <h3 style="margin: 0 0 0.5rem 0; color: var(--primary);">${o.product_name}</h3>
+                                <div style="font-weight: 600; margin-bottom: 0.5rem;">${formatPrice(o.price)}</div>
+                                <div style="color: var(--text-muted); font-size: 0.9rem;">
+                                    Distance: <strong>${parseFloat(o.distance).toFixed(2)} km</strong> away<br>
+                                    Customer: ${o.customer_name}
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" style="padding: 1rem 2rem; font-size: 1.1rem;" onclick="acceptOrder(${o.id})">Accept Order</button>
+                        </div>
+                    `).join('');
+                } else {
+                    countBadge.style.display = 'none';
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 4rem 0; color: var(--text-muted);">
+                            <div style="margin-bottom: 1rem;">
+                                <span style="display: inline-block; width: 40px; height: 40px; border: 4px solid var(--border-color); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></span>
+                            </div>
+                            <p>Listening for nearby orders...</p>
+                            <p style="font-size: 0.8rem;">(Make sure you have products added to your inventory)</p>
+                        </div>
+                        <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+                    `;
+                }
+            } catch (err) {
+                console.error('Polling error:', err);
+            }
+        }
+
+        async function acceptOrder(orderId) {
+            try {
+                await api.orders.accept(orderId);
+                alert('Order accepted! Check Order History for customer contact details.');
+                pollOrders();
+            } catch (err) {
+                alert(err.message);
+                pollOrders(); // Refresh in case it was taken
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/login.html';
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            pollOrders();
+            pollInterval = setInterval(pollOrders, 5000); // Poll every 5s
+        });
+    </script>
+</body>
+</html>

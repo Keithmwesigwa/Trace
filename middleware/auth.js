@@ -30,4 +30,11 @@ const requireAdmin = (req, res, next) => {
     next();
 };
 
-module.exports = { authenticateToken, requireAdmin, JWT_SECRET };
+const requireVendor = (req, res, next) => {
+    if (!req.user || (req.user.role !== 'vendor' && req.user.role !== 'admin')) {
+        return res.status(403).json({ error: 'Vendor access required.' });
+    }
+    next();
+};
+
+module.exports = { authenticateToken, requireAdmin, requireVendor, JWT_SECRET };

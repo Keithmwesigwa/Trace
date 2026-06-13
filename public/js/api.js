@@ -93,6 +93,19 @@ const api = {
     ratings: {
         submit: (data) => api.request('/ratings', { method: 'POST', body: JSON.stringify(data) }),
         getAll: () => api.request('/ratings')
+    },
+
+    vendor: {
+        getInventory: () => api.request('/vendor/inventory'),
+        addToInventory: (product_id, stock) => api.request('/vendor/inventory', { method: 'POST', body: JSON.stringify({ product_id, stock }) }),
+        removeFromInventory: (product_id) => api.request(`/vendor/inventory/${product_id}`, { method: 'DELETE' })
+    },
+
+    orders: {
+        create: (data) => api.request('/orders', { method: 'POST', body: JSON.stringify(data) }),
+        getNearby: () => api.request('/orders/nearby'),
+        accept: (id) => api.request(`/orders/${id}/accept`, { method: 'POST' }),
+        getMyOrders: () => api.request('/orders/my-orders')
     }
 };
 

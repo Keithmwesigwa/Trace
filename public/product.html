@@ -58,8 +58,9 @@
             <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">You might also like</h3>
             <div class="categories-scroll" id="relatedScroll"></div>
             
-            <div style="margin-top: 2rem;">
-                <button class="btn btn-primary" style="width: 100%;" onclick="alert('Order functionality coming soon!')">Contact for Price</button>
+            <div style="margin-top: 2rem;" id="orderActionContainer">
+                <button class="btn btn-primary" id="orderNowBtn" style="width: 100%; padding: 1rem; font-size: 1.1rem;">Order Now</button>
+                <div id="orderStatusMsg" style="display: none; text-align: center; margin-top: 1rem; padding: 1rem; background: var(--primary-light); color: var(--primary-dark); border-radius: var(--radius-md);"></div>
             </div>
         </div>
     </div>
@@ -146,6 +147,81 @@
                     } catch(e) {
                         console.error('Wishlist error:', e);
                     }
+                };
+
+                // Order Flow
+                const orderBtn = document.getElementById('orderNowBtn');
+                const statusMsg = document.getElementById('orderStatusMsg');
+                let orderPollInterval;
+
+                const checkOrderStatus = async (orderId) => {
+                    try {
+                        const myOrders = await api.orders.getMyOrders();
+                        const order = myOrders.find(o => o.id === orderId);
+                        if (order && order.status === 'accepted') {
+                            clearInterval(orderPollInterval);
+                            statusMsg.innerHTML = `
+                                <strong>Order Accepted!</strong><br>
+                                Vendor: ${order.vendor_name}<br>
+                                Contact: <a href="tel:${order.vendor_contact}" style="color: var(--primary); font-weight: bold;">${order.vendor_contact}</a><br>
+                                <span style="font-size:0.8rem; color:var(--text-muted);">Please call them to arrange delivery/pickup.</span>
+                            `;
+                            statusMsg.style.background = '#dff9fb';
+                            statusMsg.style.color = '#130f40';
+                        }
+                    } catch(e) { console.error(e); }
+                };
+
+                orderBtn.onclick = () => {
+                    if (!user) {
+                        window.location.href = '/login.html';
+                        return;
+                    }
+
+                    orderBtn.disabled = true;
+                    orderBtn.textContent = 'Getting location...';
+
+                    if (!navigator.geolocation) {
+                        alert('Geolocation is not supported by your browser.');
+                        orderBtn.disabled = false;
+                        orderBtn.textContent = 'Order Now';
+                        return;
+                    }
+
+                    navigator.geolocation.getCurrentPosition(
+                        async (pos) => {
+                            try {
+                                orderBtn.textContent = 'Submitting Request...';
+                                const res = await api.orders.create({
+                                    product_id: id,
+                                    latitude: pos.coords.latitude,
+                                    longitude: pos.coords.longitude
+                                });
+                                
+                                orderBtn.style.display = 'none';
+                                statusMsg.style.display = 'block';
+                                statusMsg.innerHTML = `
+                                    <div style="margin-bottom: 0.5rem;"><span style="display: inline-block; width: 20px; height: 20px; border: 3px solid var(--primary); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite;"></span></div>
+                                    <strong>Request Sent!</strong><br>
+                                    Searching for nearby vendors with stock...
+                                    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+                                `;
+
+                                // Start polling order status
+                                orderPollInterval = setInterval(() => checkOrderStatus(res.order_id), 3000);
+                            } catch (err) {
+                                alert(err.message);
+                                orderBtn.style.display = 'block';
+                                orderBtn.disabled = false;
+                                orderBtn.textContent = 'Order Now';
+                            }
+                        },
+                        (err) => {
+                            alert('We need your location to find nearby vendors.');
+                            orderBtn.disabled = false;
+                            orderBtn.textContent = 'Order Now';
+                        }
+                    );
                 };
 
                 loader.style.display = 'none';
