@@ -8,7 +8,15 @@
     <link rel="stylesheet" href="/css/style.css">
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#7C3AED">
+    <!-- iOS PWA Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Trace">
     <link rel="apple-touch-icon" href="/icons/icon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="/icons/icon.png">
+    <link rel="apple-touch-startup-image" href="/icons/icon.png">
 </head>
 <body>
     <!-- Desktop Header -->
@@ -72,7 +80,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
             Shop
         </a>
-        <a href="/login.html" class="bottom-nav-item" id="mobileProfileBtn">
+        <a href="/profile.html" class="bottom-nav-item" id="mobileProfileBtn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
             Profile
         </a>
@@ -101,11 +109,10 @@
                     e.preventDefault();
                     if(confirm('Logout?')){ localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.reload(); }
                 };
-
-                const profileBtn = document.getElementById('mobileProfileBtn');
-                profileBtn.href = "/profile.html";
-                profileBtn.onclick = null;
             } else {
+                // Guest: profile links to login
+                document.getElementById('mobileProfileBtn').href = '/login.html';
+
                 // Desktop Dropdown for Guest
                 document.getElementById('accountDropdown').innerHTML = `
                     <div class="dropdown-header">
@@ -139,7 +146,7 @@
                             <div class="product-info">
                                 <div class="brand-text">${p.brand}</div>
                                 <div class="product-title">${p.name}</div>
-                                <div class="product-price">$${typeof p.price === 'string' ? parseFloat(p.price).toFixed(2) : p.price}</div>
+                                <div class="product-price">${formatPrice(p.price)}</div>
                             </div>
                         </a>
                     `;

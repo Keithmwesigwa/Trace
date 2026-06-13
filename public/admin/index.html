@@ -146,7 +146,7 @@
                         <td>#${p.id}</td>
                         <td><div style="font-weight:600">${p.name}</div><div style="font-size:0.8rem;color:var(--text-muted)">${p.brand}</div></td>
                         <td>${p.category_name}</td>
-                        <td>$${parseFloat(p.price).toFixed(2)}</td>
+                        <td>${formatPrice(p.price)}</td>
                         <td>
                             <div class="action-flex">
                                 <button class="btn btn-outline" style="padding: 0.25rem 0.75rem; font-size:0.8rem" onclick="editProduct(${p.id})">Edit</button>

@@ -1,6 +1,13 @@
 // API service file
 const API_URL = '/api';
 
+// Global price formatter — UGX currency
+function formatPrice(price) {
+    const num = typeof price === 'string' ? parseFloat(price) : price;
+    return 'UGX ' + num.toLocaleString('en-UG', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+window.formatPrice = formatPrice;
+
 const api = {
     async request(endpoint, options = {}) {
         const token = localStorage.getItem('token');
@@ -29,12 +36,12 @@ const api = {
             
             if (response.status === 401 || response.status === 403) {
                 console.warn('Authentication error:', message);
-                // Optionally auto-logout on 401
-                if (window.location.pathname !== '/login.html') {
-                    alert('Session expired. Please log in again.');
+                // Auto-logout only if user had a token (prevents loops)
+                if (localStorage.getItem('token') && window.location.pathname !== '/login.html') {
                     localStorage.removeItem('token');
                     localStorage.removeItem('user');
                     window.location.href = '/login.html';
+                    return;
                 }
             }
             

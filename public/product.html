@@ -6,6 +6,10 @@
     <title>Product Details - Trace</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
+    <!-- iOS PWA Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/icons/icon.png">
     <style>
         body { padding-bottom: calc(85px + env(safe-area-inset-bottom, 16px)); }
         
@@ -40,7 +44,7 @@
             <h1 id="prodTitle" style="font-size: 1.5rem; margin-bottom: 0.5rem;"></h1>
             
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <div class="buy-price" id="prodPrice">$0.00</div>
+                <div class="buy-price" id="prodPrice">UGX 0</div>
                 <button id="wishlistBtn" class="btn btn-outline" style="width: 44px; height: 44px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
                     <svg id="wishlistIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                 </button>
@@ -70,7 +74,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
             Shop
         </a>
-        <a href="/login.html" class="bottom-nav-item" id="mobileProfileBtn">
+        <a href="/profile.html" class="bottom-nav-item" id="mobileProfileBtn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
             Profile
         </a>
@@ -84,10 +88,8 @@
             if(!id) return window.location.href = '/products.html';
 
             const user = JSON.parse(localStorage.getItem('user'));
-            if (user) {
-                const profileBtn = document.getElementById('mobileProfileBtn');
-                profileBtn.href = "/profile.html";
-                profileBtn.onclick = null;
+            if (!user) {
+                document.getElementById('mobileProfileBtn').href = '/login.html';
             }
 
             const loader = document.getElementById('loader');
@@ -101,7 +103,7 @@
                 document.title = `${p.name} - Trace`;
                 document.getElementById('prodBrand').textContent = p.brand;
                 document.getElementById('prodTitle').textContent = p.name;
-                document.getElementById('prodPrice').textContent = `$${parseFloat(p.price).toFixed(2)}`;
+                document.getElementById('prodPrice').textContent = formatPrice(p.price);
                 document.getElementById('prodDesc').textContent = p.description;
                 
                 const mainImg = p.images && p.images.length > 0 ? p.images[0] : 'https://via.placeholder.com/600?text=No+Image';
@@ -122,18 +124,28 @@
                             <div class="product-image-wrap" style="height: 120px; padding: 0.5rem;"><img src="${rImg}"></div>
                             <div class="product-info" style="padding: 0.5rem;">
                                 <div class="product-title" style="font-size:0.8rem; -webkit-line-clamp: 1;">${rp.name}</div>
-                                <div class="product-price" style="font-size:0.9rem;">$${parseFloat(rp.price).toFixed(2)}</div>
+                                <div class="product-price" style="font-size:0.9rem;">${formatPrice(rp.price)}</div>
                             </div>
                         </a>
                     `;
                 });
 
                 // Initial wishlist check
-                checkWishlistStatus(id);
+                if (user) {
+                    checkWishlistStatus(id);
+                }
 
                 document.getElementById('wishlistBtn').onclick = async () => {
-                    const res = await api.wishlist.toggle(id);
-                    updateWishlistUI(res.status === 'added');
+                    if (!user) {
+                        window.location.href = '/login.html';
+                        return;
+                    }
+                    try {
+                        const res = await api.wishlist.toggle(id);
+                        updateWishlistUI(res.status === 'added');
+                    } catch(e) {
+                        console.error('Wishlist error:', e);
+                    }
                 };
 
                 loader.style.display = 'none';

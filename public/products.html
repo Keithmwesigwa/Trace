@@ -6,6 +6,10 @@
     <title>Shop - Trace</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css">
+    <!-- iOS PWA Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/icons/icon.png">
     <style>
         .filter-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
         .filter-pills { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.5rem; margin-bottom: 1rem; }
@@ -19,6 +23,11 @@
             <nav class="nav-links">
                 <a href="/products.html">All Products</a>
             </nav>
+            <div class="account-wrapper" id="desktopAccount">
+                <a href="/profile.html" class="account-icon" id="desktopProfileLink" style="text-decoration:none; color:inherit;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </a>
+            </div>
         </div>
     </header>
 
@@ -61,7 +70,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
             Shop
         </a>
-        <a href="/login.html" class="bottom-nav-item" id="mobileProfileBtn">
+        <a href="/profile.html" class="bottom-nav-item" id="mobileProfileBtn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
             Profile
         </a>
@@ -73,10 +82,9 @@
         
         document.addEventListener('DOMContentLoaded', async () => {
             const user = JSON.parse(localStorage.getItem('user'));
-            if (user) {
-                const profileBtn = document.getElementById('mobileProfileBtn');
-                profileBtn.href = "/profile.html";
-                profileBtn.onclick = null;
+            if (!user) {
+                document.getElementById('mobileProfileBtn').href = '/login.html';
+                document.getElementById('desktopProfileLink').href = '/login.html';
             }
 
             const urlParams = new URLSearchParams(window.location.search);
@@ -141,7 +149,7 @@
                             <div class="product-info">
                                 <div class="brand-text">${p.brand}</div>
                                 <div class="product-title">${p.name}</div>
-                                <div class="product-price">$${parseFloat(p.price).toFixed(2)}</div>
+                                <div class="product-price">${formatPrice(p.price)}</div>
                             </div>
                         </a>
                     `;
