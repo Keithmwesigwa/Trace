@@ -13,70 +13,246 @@
     <style>
         body { padding-bottom: calc(85px + env(safe-area-inset-bottom, 16px)); }
         
-        .swiper-area { width: 100%; height: 350px; background: #f8f9fa; display: flex; flex-direction: column; position: relative; }
-        .main-img-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; overflow: hidden; }
-        .main-img-container img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .thumbnails-container { display: flex; gap: 0.5rem; padding: 0.5rem 1rem 1rem 1rem; overflow-x: auto; scroll-snap-type: x mandatory; }
-        .thumbnail { width: 50px; height: 50px; border-radius: var(--radius-md); border: 2px solid transparent; overflow: hidden; flex-shrink: 0; scroll-snap-align: start; cursor: pointer; }
-        .thumbnail.active { border-color: var(--primary); }
-        .thumbnail img { width: 100%; height: 100%; object-fit: cover; }
-        
-        /* Floating Back button */
-        .back-btn { position: absolute; top: 1rem; left: 1rem; width: 40px; height: 40px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); z-index: 10; cursor: pointer; }
+        /* Mobile-First Header Overrides */
+        @media (min-width: 768px) {
+            body { padding-bottom: 2rem; }
+        }
 
-        .details-sheet { background: var(--white); border-radius: 24px 24px 0 0; margin-top: -20px; position: relative; padding: 2rem 1.5rem; }
+        /* Swiper / Gallery Layout */
+        .product-gallery { position: relative; width: 100%; }
+        .swiper-container {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none;  /* IE/Edge */
+            border-radius: var(--radius-lg);
+            background: #f3f4f6;
+            box-shadow: var(--shadow-sm);
+        }
+        .swiper-container::-webkit-scrollbar { display: none; /* Chrome/Safari */ }
+        .swiper-slide {
+            flex: 0 0 100%;
+            width: 100%;
+            scroll-snap-align: start;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 350px;
+            overflow: hidden;
+            position: relative;
+        }
+        .swiper-slide img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            padding: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+        .swiper-slide img:hover {
+            transform: scale(1.03);
+        }
+        .slider-dots {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .slider-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .slider-dot.active {
+            background: var(--primary);
+            transform: scale(1.2);
+            width: 16px;
+            border-radius: 4px;
+        }
         
-        .spec-item { display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
+        /* Floating Back button (Mobile Only) */
+        .back-btn {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(8px);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-md);
+            z-index: 10;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: transform 0.2s;
+        }
+        .back-btn:active {
+            transform: scale(0.9);
+        }
+        @media (min-width: 768px) {
+            .back-btn { display: none; }
+        }
+
+        /* Product Details Sheet */
+        .details-sheet {
+            background: var(--white);
+            border-radius: 24px 24px 0 0;
+            margin-top: -20px;
+            position: relative;
+            padding: 2rem 1.5rem;
+            box-shadow: 0 -10px 20px rgba(0, 0, 0, 0.02);
+        }
+        
+        /* Desktop Dual Column Grid */
+        @media (min-width: 768px) {
+            .product-layout-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 3rem;
+                margin-top: 2rem;
+            }
+            .details-sheet {
+                margin-top: 0;
+                padding: 0;
+                border-radius: 0;
+                box-shadow: none;
+            }
+            .swiper-slide {
+                height: 480px;
+            }
+        }
+
+        .spec-item { display: flex; justify-content: space-between; padding: 0.85rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.95rem; }
         .spec-item .key { color: var(--text-muted); font-weight: 500; }
         .spec-item .val { color: var(--text-main); font-weight: 600; text-align: right; max-width: 60%; }
 
-        .buy-price { font-size: 1.5rem; font-weight: 800; color: var(--primary-dark); }
+        .buy-price { font-size: 1.75rem; font-weight: 800; color: var(--primary-dark); }
+
+        /* Premium Related Grid on Desktop, Scroll on Mobile */
+        .related-products-section {
+            margin-top: 4rem;
+            border-top: 1px solid var(--border-color);
+            padding-top: 2.5rem;
+            margin-bottom: 2rem;
+        }
+        .related-grid {
+            display: flex;
+            gap: 1rem;
+            overflow-x: auto;
+            padding: 0.5rem 0 1.5rem;
+            scroll-snap-type: x mandatory;
+        }
+        .related-grid::-webkit-scrollbar { display: none; }
+        @media (min-width: 768px) {
+            .related-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 1.5rem;
+                overflow-x: visible;
+                padding: 1rem 0;
+            }
+        }
+
+        .premium-card {
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid rgba(0,0,0,0.04);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            width: 150px;
+            flex-shrink: 0;
+            scroll-snap-align: start;
+        }
+        @media (min-width: 768px) {
+            .premium-card {
+                width: auto;
+            }
+            .premium-card:hover {
+                transform: translateY(-4px);
+                box-shadow: var(--shadow-md);
+            }
+        }
     </style>
 </head>
 <body>
     <div class="loader" id="loader" style="margin-top: 5rem;"></div>
-    
-    <div id="productContent" style="display: none;">
-        <div class="swiper-area">
-            <div class="back-btn" onclick="history.back()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+
+    <!-- Desktop Header -->
+    <header>
+        <div class="container nav-container">
+            <a href="/" class="logo">Trace</a>
+            <nav class="nav-links">
+                <a href="/products.html">All Products</a>
+            </nav>
+            <div class="account-wrapper" id="desktopAccount">
+                <a href="/profile.html" class="account-icon" id="desktopProfileLink" style="text-decoration:none; color:inherit;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </a>
             </div>
-            <div class="main-img-container">
-                <img id="mainImage" src="" alt="">
-            </div>
-            <div class="thumbnails-container" id="thumbnailsContainer"></div>
         </div>
-        
-        <div class="details-sheet container">
-            <div style="text-transform: uppercase; letter-spacing: 0.05em; color: var(--primary); font-weight: 700; font-size: 0.8rem; margin-bottom: 0.5rem;" id="prodBrand"></div>
-            <h1 id="prodTitle" style="font-size: 1.5rem; margin-bottom: 0.5rem;"></h1>
-            
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <div class="buy-price" id="prodPrice">UGX 0</div>
-                <button id="wishlistBtn" class="btn btn-outline" style="width: 44px; height: 44px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
-                    <svg id="wishlistIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-                </button>
+    </header>
+    
+    <div id="productContent" class="container" style="display: none;">
+        <div class="product-layout-grid">
+            <!-- Left Side: Image Gallery -->
+            <div class="product-gallery">
+                <div class="back-btn" onclick="history.back()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                </div>
+                <div class="swiper-container" id="swiperContainer">
+                    <!-- Dynamic images populated here -->
+                </div>
+                <div class="slider-dots" id="sliderDots">
+                    <!-- Dynamic dots populated here -->
+                </div>
             </div>
+            
+            <!-- Right Side: Details Form -->
+            <div class="details-sheet">
+                <div style="text-transform: uppercase; letter-spacing: 0.05em; color: var(--primary); font-weight: 700; font-size: 0.8rem; margin-bottom: 0.5rem;" id="prodBrand"></div>
+                <h1 id="prodTitle" style="font-size: 1.75rem; margin-bottom: 0.75rem; line-height: 1.25;"></h1>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.75rem;">
+                    <div class="buy-price" id="prodPrice">UGX 0</div>
+                    <button id="wishlistBtn" class="btn btn-outline" style="width: 44px; height: 44px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%;">
+                        <svg id="wishlistIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                    </button>
+                </div>
 
-            <div class="form-group" style="margin-bottom: 1rem;">
-                <label>Condition</label>
-                <select id="conditionSelect" class="form-control" style="font-weight: 600; font-size: 1rem;"></select>
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label>Condition</label>
+                    <select id="conditionSelect" class="form-control" style="font-weight: 600; font-size: 1rem;"></select>
+                </div>
+
+                <div id="variationsContainer" style="margin-bottom: 1.5rem;"></div>
+
+                <p id="prodDesc" style="font-size: 1rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 2rem;"></p>
+                
+                <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">Specifications</h3>
+                <div id="specsList" style="margin-bottom: 2rem;"></div>
+                
+                <div style="margin-top: 2.5rem;" id="orderActionContainer">
+                    <button class="btn btn-primary" id="orderNowBtn" style="width: 100%; padding: 1.1rem; font-size: 1.1rem;">Order Now</button>
+                    <div id="orderStatusMsg" style="display: none; text-align: center; margin-top: 1rem; padding: 1rem; background: var(--primary-light); color: var(--primary-dark); border-radius: var(--radius-md);"></div>
+                </div>
             </div>
+        </div>
 
-            <div id="variationsContainer" style="margin-bottom: 1.5rem;"></div>
-
-            <p id="prodDesc" style="font-size: 1rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 2rem;"></p>
-            
-            <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">Specifications</h3>
-            <div id="specsList" style="margin-bottom: 3rem;"></div>
-            
-            <h3 style="font-size: 1.1rem; margin-bottom: 1rem;">You might also like</h3>
-            <div class="categories-scroll" id="relatedScroll"></div>
-            
-            <div style="margin-top: 2rem;" id="orderActionContainer">
-                <button class="btn btn-primary" id="orderNowBtn" style="width: 100%; padding: 1rem; font-size: 1.1rem;">Order Now</button>
-                <div id="orderStatusMsg" style="display: none; text-align: center; margin-top: 1rem; padding: 1rem; background: var(--primary-light); color: var(--primary-dark); border-radius: var(--radius-md);"></div>
-            </div>
+        <!-- You Might Also Like Section -->
+        <div class="related-products-section">
+            <h3 style="font-size: 1.35rem; margin-bottom: 1.25rem; font-weight: 800;">You might also like</h3>
+            <div class="related-grid" id="relatedScroll"></div>
         </div>
     </div>
 
@@ -106,6 +282,7 @@
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user) {
                 document.getElementById('mobileProfileBtn').href = '/login.html';
+                document.getElementById('desktopProfileLink').href = '/login.html';
             }
 
             const loader = document.getElementById('loader');
@@ -167,20 +344,41 @@
                     }
                 });
                 
-                // Image Gallery
-                const mainImg = p.images && p.images.length > 0 ? p.images[0] : 'https://via.placeholder.com/600?text=No+Image';
-                document.getElementById('mainImage').src = mainImg;
+                // Image Gallery with dots
+                const swiperContainer = document.getElementById('swiperContainer');
+                const dotsContainer = document.getElementById('sliderDots');
+                const imagesList = p.images && p.images.length > 0 ? p.images : ['https://via.placeholder.com/600?text=No+Image'];
+                
+                imagesList.forEach((imgUrl, idx) => {
+                    swiperContainer.innerHTML += `
+                        <div class="swiper-slide">
+                            <img src="${imgUrl}" alt="${p.name}">
+                        </div>
+                    `;
+                    
+                    dotsContainer.innerHTML += `
+                        <div class="slider-dot ${idx === 0 ? 'active' : ''}" onclick="scrollToSlide(${idx})"></div>
+                    `;
+                });
 
-                if (p.images && p.images.length > 1) {
-                    const thumbs = document.getElementById('thumbnailsContainer');
-                    p.images.forEach((imgUrl, idx) => {
-                        thumbs.innerHTML += `
-                            <div class="thumbnail ${idx === 0 ? 'active' : ''}" onclick="setMainImage('${imgUrl}', this)">
-                                <img src="${imgUrl}">
-                            </div>
-                        `;
+                // Sync dots on scroll
+                swiperContainer.addEventListener('scroll', () => {
+                    const width = swiperContainer.offsetWidth;
+                    const index = Math.round(swiperContainer.scrollLeft / width);
+                    const dots = document.querySelectorAll('.slider-dot');
+                    dots.forEach((dot, idx) => {
+                        dot.classList.toggle('active', idx === index);
                     });
-                }
+                });
+
+                // Function to scroll slide on dot click
+                window.scrollToSlide = function(idx) {
+                    const width = swiperContainer.offsetWidth;
+                    swiperContainer.scrollTo({
+                        left: idx * width,
+                        behavior: 'smooth'
+                    });
+                };
 
                 // Specs
                 const specsList = document.getElementById('specsList');
@@ -190,16 +388,20 @@
                     }
                 }
 
+                // Related Products
                 const related = document.getElementById('relatedScroll');
                 data.related.forEach(rp => {
                     const rImg = rp.images && rp.images.length > 0 ? rp.images[0] : 'https://via.placeholder.com/300';
                     const rPrice = rp.price_new || rp.price_refurbished || rp.price_used || 0;
                     related.innerHTML += `
-                        <a href="/product.html?id=${rp.id}" class="product-card" style="width: 140px; flex: 0 0 auto; scroll-snap-align: start;">
-                            <div class="product-image-wrap" style="height: 120px; padding: 0.5rem;"><img src="${rImg}"></div>
-                            <div class="product-info" style="padding: 0.5rem;">
-                                <div class="product-title" style="font-size:0.8rem; -webkit-line-clamp: 1;">${rp.name}</div>
-                                <div class="product-price" style="font-size:0.9rem;">${formatPrice(rPrice)}</div>
+                        <a href="/product.html?id=${rp.id}" class="premium-card">
+                            <div class="product-image-wrap" style="height: 120px; padding: 0.5rem; background: #f8f9fa;">
+                                <img src="${rImg}">
+                            </div>
+                            <div class="product-info" style="padding: 0.75rem;">
+                                <div class="brand-text">${rp.brand}</div>
+                                <div class="product-title" style="font-size:0.85rem; height: 2.4rem; -webkit-line-clamp: 2;">${rp.name}</div>
+                                <div class="product-price" style="font-size:0.95rem; margin-top: 0.25rem;">${formatPrice(rPrice)}</div>
                             </div>
                         </a>
                     `;
@@ -314,12 +516,6 @@
                 alert('Failed to load product.');
             }
         });
-
-        function setMainImage(url, thumbEl) {
-            document.getElementById('mainImage').src = url;
-            document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
-            thumbEl.classList.add('active');
-        }
 
         async function checkWishlistStatus(id) {
             try {
