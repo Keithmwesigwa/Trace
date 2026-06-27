@@ -54,24 +54,33 @@
             transform: scale(1.03);
         }
         .slider-dots {
+            position: absolute;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
             display: flex;
             justify-content: center;
             gap: 0.5rem;
-            margin-top: 1rem;
-            margin-bottom: 0.5rem;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(4px);
+            padding: 6px 10px;
+            border-radius: var(--radius-full);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: var(--shadow-sm);
         }
         .slider-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: var(--border-color);
+            background: rgba(0, 0, 0, 0.2);
             cursor: pointer;
             transition: all 0.3s ease;
         }
         .slider-dot.active {
             background: var(--primary);
-            transform: scale(1.2);
-            width: 16px;
+            transform: scale(1.1);
+            width: 14px;
             border-radius: 4px;
         }
         
