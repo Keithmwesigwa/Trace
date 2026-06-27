@@ -13,8 +13,13 @@
     <style>
         body { padding-bottom: calc(85px + env(safe-area-inset-bottom, 16px)); }
         
-        .swiper-area { width: 100%; height: 350px; background: #f8f9fa; display: flex; align-items: center; justify-content: center; position: relative; }
-        .swiper-area img { max-width: 100%; max-height: 100%; object-fit: contain; padding: 2rem; }
+        .swiper-area { width: 100%; height: 350px; background: #f8f9fa; display: flex; flex-direction: column; position: relative; }
+        .main-img-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; overflow: hidden; }
+        .main-img-container img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .thumbnails-container { display: flex; gap: 0.5rem; padding: 0.5rem 1rem 1rem 1rem; overflow-x: auto; scroll-snap-type: x mandatory; }
+        .thumbnail { width: 50px; height: 50px; border-radius: var(--radius-md); border: 2px solid transparent; overflow: hidden; flex-shrink: 0; scroll-snap-align: start; cursor: pointer; }
+        .thumbnail.active { border-color: var(--primary); }
+        .thumbnail img { width: 100%; height: 100%; object-fit: cover; }
         
         /* Floating Back button */
         .back-btn { position: absolute; top: 1rem; left: 1rem; width: 40px; height: 40px; background: rgba(255,255,255,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm); z-index: 10; cursor: pointer; }
@@ -36,7 +41,10 @@
             <div class="back-btn" onclick="history.back()">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
             </div>
-            <img id="mainImage" src="" alt="">
+            <div class="main-img-container">
+                <img id="mainImage" src="" alt="">
+            </div>
+            <div class="thumbnails-container" id="thumbnailsContainer"></div>
         </div>
         
         <div class="details-sheet container">
@@ -49,6 +57,13 @@
                     <svg id="wishlistIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
                 </button>
             </div>
+
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label>Condition</label>
+                <select id="conditionSelect" class="form-control" style="font-weight: 600; font-size: 1rem;"></select>
+            </div>
+
+            <div id="variationsContainer" style="margin-bottom: 1.5rem;"></div>
 
             <p id="prodDesc" style="font-size: 1rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 2rem;"></p>
             
@@ -97,6 +112,9 @@
             const content = document.getElementById('productContent');
             loader.style.display = 'block';
 
+            let productPrices = {};
+            let productVariations = {};
+
             try {
                 const data = await api.products.getById(id);
                 const p = data.product;
@@ -104,12 +122,67 @@
                 document.title = `${p.name} - Trace`;
                 document.getElementById('prodBrand').textContent = p.brand;
                 document.getElementById('prodTitle').textContent = p.name;
-                document.getElementById('prodPrice').textContent = formatPrice(p.price);
                 document.getElementById('prodDesc').textContent = p.description;
+
+                // Pricing & Condition logic
+                productPrices = {
+                    'new': p.price_new,
+                    'refurbished': p.price_refurbished,
+                    'used': p.price_used
+                };
+
+                const condSelect = document.getElementById('conditionSelect');
+                let firstAvailable = null;
+                if (p.price_new) { condSelect.innerHTML += `<option value="new">Brand New - ${formatPrice(p.price_new)}</option>`; firstAvailable = firstAvailable || 'new'; }
+                if (p.price_refurbished) { condSelect.innerHTML += `<option value="refurbished">Refurbished - ${formatPrice(p.price_refurbished)}</option>`; firstAvailable = firstAvailable || 'refurbished'; }
+                if (p.price_used) { condSelect.innerHTML += `<option value="used">Used - ${formatPrice(p.price_used)}</option>`; firstAvailable = firstAvailable || 'used'; }
+
+                const updatePriceDisplay = () => {
+                    const selCond = condSelect.value;
+                    document.getElementById('prodPrice').textContent = formatPrice(productPrices[selCond]);
+                };
+                condSelect.addEventListener('change', updatePriceDisplay);
+                if (firstAvailable) {
+                    condSelect.value = firstAvailable;
+                    updatePriceDisplay();
+                } else {
+                    document.getElementById('prodPrice').textContent = 'N/A';
+                    document.getElementById('orderNowBtn').disabled = true;
+                }
+
+                // Variations
+                productVariations = p.variations || {};
+                const varCont = document.getElementById('variationsContainer');
+                Object.entries(productVariations).forEach(([key, values]) => {
+                    if (Array.isArray(values) && values.length > 0) {
+                        const selHTML = values.map(v => `<option value="${v}">${v}</option>`).join('');
+                        varCont.innerHTML += `
+                            <div class="form-group" style="margin-bottom: 1rem;">
+                                <label>${key}</label>
+                                <select class="form-control var-select" data-key="${key}" style="padding: 0.5rem;">
+                                    ${selHTML}
+                                </select>
+                            </div>
+                        `;
+                    }
+                });
                 
+                // Image Gallery
                 const mainImg = p.images && p.images.length > 0 ? p.images[0] : 'https://via.placeholder.com/600?text=No+Image';
                 document.getElementById('mainImage').src = mainImg;
 
+                if (p.images && p.images.length > 1) {
+                    const thumbs = document.getElementById('thumbnailsContainer');
+                    p.images.forEach((imgUrl, idx) => {
+                        thumbs.innerHTML += `
+                            <div class="thumbnail ${idx === 0 ? 'active' : ''}" onclick="setMainImage('${imgUrl}', this)">
+                                <img src="${imgUrl}">
+                            </div>
+                        `;
+                    });
+                }
+
+                // Specs
                 const specsList = document.getElementById('specsList');
                 if (p.specs && Object.keys(p.specs).length > 0) {
                     for (const [key, value] of Object.entries(p.specs)) {
@@ -120,12 +193,13 @@
                 const related = document.getElementById('relatedScroll');
                 data.related.forEach(rp => {
                     const rImg = rp.images && rp.images.length > 0 ? rp.images[0] : 'https://via.placeholder.com/300';
+                    const rPrice = rp.price_new || rp.price_refurbished || rp.price_used || 0;
                     related.innerHTML += `
                         <a href="/product.html?id=${rp.id}" class="product-card" style="width: 140px; flex: 0 0 auto; scroll-snap-align: start;">
                             <div class="product-image-wrap" style="height: 120px; padding: 0.5rem;"><img src="${rImg}"></div>
                             <div class="product-info" style="padding: 0.5rem;">
                                 <div class="product-title" style="font-size:0.8rem; -webkit-line-clamp: 1;">${rp.name}</div>
-                                <div class="product-price" style="font-size:0.9rem;">${formatPrice(rp.price)}</div>
+                                <div class="product-price" style="font-size:0.9rem;">${formatPrice(rPrice)}</div>
                             </div>
                         </a>
                     `;
@@ -192,10 +266,19 @@
                         async (pos) => {
                             try {
                                 orderBtn.textContent = 'Submitting Request...';
+                                
+                                // Collect selected variations
+                                const selectedVars = {};
+                                document.querySelectorAll('.var-select').forEach(sel => {
+                                    selectedVars[sel.dataset.key] = sel.value;
+                                });
+
                                 const res = await api.orders.create({
                                     product_id: id,
                                     latitude: pos.coords.latitude,
-                                    longitude: pos.coords.longitude
+                                    longitude: pos.coords.longitude,
+                                    condition_type: condSelect.value,
+                                    variations: selectedVars
                                 });
                                 
                                 orderBtn.style.display = 'none';
@@ -231,6 +314,12 @@
                 alert('Failed to load product.');
             }
         });
+
+        function setMainImage(url, thumbEl) {
+            document.getElementById('mainImage').src = url;
+            document.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
+            thumbEl.classList.add('active');
+        }
 
         async function checkWishlistStatus(id) {
             try {

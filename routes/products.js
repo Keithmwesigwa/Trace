@@ -16,14 +16,14 @@ router.get('/', async (req, res) => {
     }
     if (category) { conditions.push('c.name = ?'); params.push(category); }
     if (brand) { conditions.push('p.brand = ?'); params.push(brand); }
-    if (minPrice) { conditions.push('p.price >= ?'); params.push(parseFloat(minPrice)); }
-    if (maxPrice) { conditions.push('p.price <= ?'); params.push(parseFloat(maxPrice)); }
+    if (minPrice) { conditions.push('COALESCE(p.price_new, p.price_refurbished, p.price_used) >= ?'); params.push(parseFloat(minPrice)); }
+    if (maxPrice) { conditions.push('COALESCE(p.price_new, p.price_refurbished, p.price_used) <= ?'); params.push(parseFloat(maxPrice)); }
 
     const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
 
     let orderBy = 'p.created_at DESC';
-    if (sort === 'price_asc') orderBy = 'p.price ASC';
-    else if (sort === 'price_desc') orderBy = 'p.price DESC';
+    if (sort === 'price_asc') orderBy = 'COALESCE(p.price_new, p.price_refurbished, p.price_used) ASC';
+    else if (sort === 'price_desc') orderBy = 'COALESCE(p.price_new, p.price_refurbished, p.price_used) DESC';
     else if (sort === 'name') orderBy = 'p.name ASC';
 
     try {
@@ -44,6 +44,7 @@ router.get('/', async (req, res) => {
             products: rows.map(p => ({
                 ...p,
                 specs: typeof p.specs === 'string' ? JSON.parse(p.specs || '{}') : p.specs,
+                variations: typeof p.variations === 'string' ? JSON.parse(p.variations || '{}') : p.variations,
                 images: typeof p.images === 'string' ? JSON.parse(p.images || '[]') : p.images
             })),
             pagination: {
@@ -81,6 +82,7 @@ router.get('/:id', async (req, res) => {
         if (rows.length === 0) return res.status(404).json({ error: 'Product not found.' });
         const product = rows[0];
         if (typeof product.specs === 'string') product.specs = JSON.parse(product.specs || '{}');
+        if (typeof product.variations === 'string') product.variations = JSON.parse(product.variations || '{}');
         if (typeof product.images === 'string') product.images = JSON.parse(product.images || '[]');
 
         // Related products
@@ -99,13 +101,13 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/products (admin)
 router.post('/', authenticateToken, requireAdmin, async (req, res) => {
-    const { name, brand, category_id, price, description, specs, images } = req.body;
-    if (!name || !price || !category_id) return res.status(400).json({ error: 'Name, price, category required.' });
+    const { name, brand, category_id, price_new, price_refurbished, price_used, description, specs, variations, images } = req.body;
+    if (!name || !category_id) return res.status(400).json({ error: 'Name and category required.' });
     try {
         const [result] = await db.query(
-            'INSERT INTO products (name, brand, category_id, price, description, specs, images) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [name, brand, category_id, price, description,
-                JSON.stringify(specs || {}), JSON.stringify(images || [])]
+            'INSERT INTO products (name, brand, category_id, price_new, price_refurbished, price_used, description, specs, variations, images) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [name, brand, category_id, price_new || null, price_refurbished || null, price_used || null, description,
+                JSON.stringify(specs || {}), JSON.stringify(variations || {}), JSON.stringify(images || [])]
         );
         res.status(201).json({ id: result.insertId, message: 'Product created.' });
     } catch (err) {
@@ -116,12 +118,12 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
 
 // PUT /api/products/:id (admin)
 router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
-    const { name, brand, category_id, price, description, specs, images } = req.body;
+    const { name, brand, category_id, price_new, price_refurbished, price_used, description, specs, variations, images } = req.body;
     try {
         await db.query(
-            'UPDATE products SET name=?, brand=?, category_id=?, price=?, description=?, specs=?, images=? WHERE id=?',
-            [name, brand, category_id, price, description,
-                JSON.stringify(specs || {}), JSON.stringify(images || []), req.params.id]
+            'UPDATE products SET name=?, brand=?, category_id=?, price_new=?, price_refurbished=?, price_used=?, description=?, specs=?, variations=?, images=? WHERE id=?',
+            [name, brand, category_id, price_new || null, price_refurbished || null, price_used || null, description,
+                JSON.stringify(specs || {}), JSON.stringify(variations || {}), JSON.stringify(images || []), req.params.id]
         );
         res.json({ message: 'Product updated.' });
     } catch (err) {

@@ -47,9 +47,12 @@ async function initDB() {
                 name VARCHAR(200),
                 brand VARCHAR(100),
                 category_id INT,
-                price DECIMAL(10,2),
+                price_new DECIMAL(10,2) NULL,
+                price_refurbished DECIMAL(10,2) NULL,
+                price_used DECIMAL(10,2) NULL,
                 description TEXT,
                 specs JSON,
+                variations JSON,
                 images JSON,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (category_id) REFERENCES categories(id)
@@ -62,11 +65,12 @@ async function initDB() {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 vendor_id INT,
                 product_id INT,
+                condition_type ENUM('new', 'refurbished', 'used') NOT NULL,
                 stock INT DEFAULT 1,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (vendor_id) REFERENCES users(id) ON DELETE CASCADE,
                 FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-                UNIQUE KEY (vendor_id, product_id)
+                UNIQUE KEY (vendor_id, product_id, condition_type)
             )
         `);
 
@@ -76,6 +80,8 @@ async function initDB() {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 user_id INT,
                 product_id INT,
+                condition_type ENUM('new', 'refurbished', 'used') NOT NULL,
+                variations JSON,
                 status ENUM('pending', 'accepted', 'completed', 'cancelled') DEFAULT 'pending',
                 vendor_id INT NULL,
                 user_lat DECIMAL(10, 8),
@@ -121,7 +127,7 @@ async function initDB() {
         
         // Sample Vendor
         await db.query('INSERT INTO users (name, email, password, contact, role, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-            ['Kampala Electronics', 'vendor@shop.com', hashed, '+256700000000', 'vendor', 0.347596, 32.582520]); // Example coordinates in Kampala
+            ['Kampala Electronics', 'vendor@shop.com', hashed, '+256700000000', 'vendor', 0.347596, 32.582520]);
 
         // Categories
         await db.query("INSERT INTO categories (name, icon) VALUES ('Laptops', '💻'), ('Phones', '📱'), ('Power Banks', '🔋'), ('Accessories', '🎧')");
@@ -132,26 +138,29 @@ async function initDB() {
         const laptopCatId = cats.find(c => c.name === 'Laptops').id;
 
         const [productResult] = await db.query(`
-            INSERT INTO products (name, brand, category_id, price, description, specs, images)
+            INSERT INTO products (name, brand, category_id, price_new, price_refurbished, price_used, description, specs, variations, images)
             VALUES 
-            (?, ?, ?, ?, ?, ?, ?),
-            (?, ?, ?, ?, ?, ?, ?)
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?),
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
-            'iPhone 15 Pro Max', 'Apple', phoneCatId, 1199.99, 
+            'iPhone 15 Pro Max', 'Apple', phoneCatId, 1199.99, 999.99, 799.99, 
             'The ultimate iPhone with titanium design and A17 Pro chip.', 
             JSON.stringify({ screen: '6.7" OLED', battery: '4422 mAh', camera: '48MP Main' }), 
+            JSON.stringify({ Color: ['Natural Titanium', 'Blue Titanium', 'White Titanium', 'Black Titanium'], Storage: ['256GB', '512GB', '1TB'] }),
             JSON.stringify(['https://res.cloudinary.com/dpgf8pzuo/image/upload/v1713531000/iphone15pro_s8jh7b.jpg']),
 
-            'ThinkPad X1 Carbon Gen 11', 'Lenovo', laptopCatId, 1450.00, 
+            'ThinkPad X1 Carbon Gen 11', 'Lenovo', laptopCatId, 1450.00, 1100.00, 900.00, 
             'Premium business laptop with incredible keyboard and light weight.', 
             JSON.stringify({ cpu: 'Intel Core i7-1355U', ram: '16GB LPDDR5', storage: '512GB SSD', screen: '14" WUXGA' }), 
+            JSON.stringify({ Color: ['Black'], RAM: ['16GB', '32GB'] }),
             JSON.stringify([])
         ]);
 
         // Add iPhone to sample vendor's inventory
         const vendorId = 2; // Kampala Electronics
         const firstProductId = productResult.insertId; // First product is iPhone
-        await db.query('INSERT INTO vendor_inventory (vendor_id, product_id, stock) VALUES (?, ?, ?)', [vendorId, firstProductId, 5]);
+        await db.query('INSERT INTO vendor_inventory (vendor_id, product_id, condition_type, stock) VALUES (?, ?, ?, ?)', [vendorId, firstProductId, 'new', 5]);
+        await db.query('INSERT INTO vendor_inventory (vendor_id, product_id, condition_type, stock) VALUES (?, ?, ?, ?)', [vendorId, firstProductId, 'refurbished', 2]);
 
         console.log('Enabling foreign key checks...');
         await db.query('SET FOREIGN_KEY_CHECKS = 1');

@@ -146,7 +146,7 @@
                             <div class="product-info">
                                 <div class="brand-text">${p.brand}</div>
                                 <div class="product-title">${p.name}</div>
-                                <div class="product-price">${formatPrice(p.price)}</div>
+                                <div class="product-price">${formatPrice(p.price_new || p.price_refurbished || p.price_used)}</div>
                             </div>
                         </a>
                     `;

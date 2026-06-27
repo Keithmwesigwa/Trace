@@ -5,15 +5,15 @@ const { authenticateToken, requireVendor } = require('../middleware/auth');
 
 // POST /api/orders (User places an order)
 router.post('/', authenticateToken, async (req, res) => {
-    const { product_id, latitude, longitude } = req.body;
-    if (!product_id || !latitude || !longitude) {
-        return res.status(400).json({ error: 'Product ID and location required.' });
+    const { product_id, latitude, longitude, condition_type, variations } = req.body;
+    if (!product_id || !latitude || !longitude || !condition_type) {
+        return res.status(400).json({ error: 'Product ID, location, and condition type required.' });
     }
 
     try {
         const [result] = await db.query(
-            'INSERT INTO orders (user_id, product_id, user_lat, user_lng, status) VALUES (?, ?, ?, ?, ?)',
-            [req.user.id, product_id, latitude, longitude, 'pending']
+            'INSERT INTO orders (user_id, product_id, user_lat, user_lng, status, condition_type, variations) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [req.user.id, product_id, latitude, longitude, 'pending', condition_type, JSON.stringify(variations || {})]
         );
         res.status(201).json({ message: 'Order placed, broadcasting to vendors...', order_id: result.insertId });
     } catch (err) {
@@ -32,7 +32,7 @@ router.get('/nearby', authenticateToken, requireVendor, async (req, res) => {
 
         // Haversine formula for distance in km
         const [orders] = await db.query(`
-            SELECT o.*, p.name as product_name, p.brand, p.price, 
+            SELECT o.*, p.name as product_name, p.brand, p.price_new, p.price_refurbished, p.price_used, 
                    u.name as customer_name,
                    (6371 * acos(cos(radians(?)) * cos(radians(o.user_lat)) 
                    * cos(radians(o.user_lng) - radians(?)) + sin(radians(?)) 
@@ -40,13 +40,16 @@ router.get('/nearby', authenticateToken, requireVendor, async (req, res) => {
             FROM orders o
             JOIN products p ON o.product_id = p.id
             JOIN users u ON o.user_id = u.id
-            JOIN vendor_inventory vi ON o.product_id = vi.product_id AND vi.vendor_id = ?
+            JOIN vendor_inventory vi ON o.product_id = vi.product_id AND o.condition_type = vi.condition_type AND vi.vendor_id = ?
             WHERE o.status = 'pending'
             HAVING distance < 50 -- 50km radius
             ORDER BY distance ASC
         `, [vLat, vLng, vLat, req.user.id]);
 
-        res.json(orders);
+        res.json(orders.map(o => ({
+            ...o,
+            variations: typeof o.variations === 'string' ? JSON.parse(o.variations || '{}') : o.variations
+        })));
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Server error' });
@@ -56,7 +59,6 @@ router.get('/nearby', authenticateToken, requireVendor, async (req, res) => {
 // POST /api/orders/:id/accept (Vendor accepts order)
 router.post('/:id/accept', authenticateToken, requireVendor, async (req, res) => {
     try {
-        // We use a transaction or simply rely on row update count to prevent race conditions
         const [result] = await db.query(
             "UPDATE orders SET status = 'accepted', vendor_id = ? WHERE id = ? AND status = 'pending'",
             [req.user.id, req.params.id]
@@ -80,7 +82,7 @@ router.get('/my-orders', authenticateToken, async (req, res) => {
         const condition = isVendor ? 'o.vendor_id = ?' : 'o.user_id = ?';
         
         const [orders] = await db.query(`
-            SELECT o.*, p.name as product_name, p.price, p.images,
+            SELECT o.*, p.name as product_name, p.price_new, p.price_refurbished, p.price_used, p.images,
                    c.name as customer_name, c.contact as customer_contact,
                    v.name as vendor_name, v.contact as vendor_contact
             FROM orders o
@@ -93,6 +95,7 @@ router.get('/my-orders', authenticateToken, async (req, res) => {
 
         res.json(orders.map(o => ({
             ...o,
+            variations: typeof o.variations === 'string' ? JSON.parse(o.variations || '{}') : o.variations,
             images: typeof o.images === 'string' ? JSON.parse(o.images || '[]') : o.images
         })));
     } catch (err) {

@@ -14,9 +14,13 @@
         .nav-item:hover, .nav-item.active { background: var(--primary-light); color: var(--primary-dark); }
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 100; }
         .modal.active { display: flex; }
-        .modal-content { background: var(--white); padding: 2rem; border-radius: var(--radius-lg); width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
-        .specs-editor { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .modal-content { background: var(--white); padding: 2rem; border-radius: var(--radius-lg); width: 100%; max-width: 800px; max-height: 90vh; overflow-y: auto; }
+        .specs-editor, .variations-editor { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5rem; margin-bottom: 0.5rem; }
         .action-flex { display: flex; gap: 0.5rem; }
+        .image-preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.5rem; margin-top: 1rem; }
+        .image-preview-item { position: relative; height: 80px; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border-color); }
+        .image-preview-item img { width: 100%; height: 100%; object-fit: cover; }
+        .image-preview-item .remove-img { position: absolute; top: 2px; right: 2px; background: rgba(255,0,0,0.8); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
@@ -46,7 +50,7 @@
                             <th>ID</th>
                             <th>Name</th>
                             <th>Category</th>
-                            <th>Price</th>
+                            <th>Prices (N / R / U)</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -85,31 +89,52 @@
                         <select class="form-control" id="pCategory" required></select>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>Price</label>
-                    <input type="number" step="0.01" class="form-control" id="pPrice" required>
+                
+                <h4 style="margin: 1.5rem 0 0.5rem 0;">Pricing</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group">
+                        <label>Brand New Price</label>
+                        <input type="number" step="0.01" class="form-control" id="pPriceNew">
+                    </div>
+                    <div class="form-group">
+                        <label>Refurbished Price</label>
+                        <input type="number" step="0.01" class="form-control" id="pPriceRefurbished">
+                    </div>
+                    <div class="form-group">
+                        <label>Used Price</label>
+                        <input type="number" step="0.01" class="form-control" id="pPriceUsed">
+                    </div>
                 </div>
+
                 <div class="form-group">
                     <label>Description</label>
                     <textarea class="form-control" id="pDesc" rows="3" required></textarea>
                 </div>
                 
                 <div class="form-group">
-                    <label>Product Image</label>
-                    <input type="file" id="pImage" accept="image/*" class="form-control" style="padding-bottom: 2rem;">
-                    <input type="hidden" id="pImageUrl">
-                    <div id="imagePreview" style="margin-top: 1rem; height: 100px; display: none;">
-                        <img src="" style="height: 100%; border-radius: var(--radius-md); object-fit: contain;">
-                    </div>
+                    <label>Product Images (Max 9)</label>
+                    <input type="file" id="pImageInput" accept="image/*" multiple class="form-control" style="padding-bottom: 2rem;">
+                    <div id="imagePreviewGrid" class="image-preview-grid"></div>
                 </div>
 
-                <div class="form-group">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <label style="margin-bottom: 0;">Specifications</label>
-                        <button type="button" class="btn btn-outline" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;" onclick="loadPresets()">Load Presets</button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1rem;">
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <label style="margin-bottom: 0;">Specifications</label>
+                            <button type="button" class="btn btn-outline" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;" onclick="loadPresets()">Load Presets</button>
+                        </div>
+                        <div id="specsContainer"></div>
+                        <button type="button" class="btn btn-outline" style="width: 100%; margin-top: 0.5rem; font-size: 0.85rem;" onclick="addSpecRow()">+ Add Spec</button>
                     </div>
-                    <div id="specsContainer"></div>
-                    <button type="button" class="btn btn-outline" style="width: 100%; margin-top: 0.5rem; font-size: 0.85rem;" onclick="addSpecRow()">+ Add Specification</button>
+
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <label style="margin-bottom: 0;">Custom Variations</label>
+                        </div>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: -0.25rem; margin-bottom: 0.5rem;">Values must be comma separated (e.g. Red, Blue)</p>
+                        <div id="variationsContainer"></div>
+                        <button type="button" class="btn btn-outline" style="width: 100%; margin-top: 0.5rem; font-size: 0.85rem;" onclick="addVariationRow()">+ Add Variation</button>
+                    </div>
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
@@ -129,6 +154,7 @@
         }
 
         let allProducts = [];
+        let uploadedImages = []; // Array of URL strings
 
         async function loadData() {
             const [productsRes, cats] = await Promise.all([
@@ -141,12 +167,19 @@
             tbody.innerHTML = '';
             
             allProducts.forEach(p => {
+                const prices = `
+                    <div style="font-size: 0.85rem;">
+                        <span style="color: green;">N: ${p.price_new ? formatPrice(p.price_new) : '-'}</span><br>
+                        <span style="color: orange;">R: ${p.price_refurbished ? formatPrice(p.price_refurbished) : '-'}</span><br>
+                        <span style="color: gray;">U: ${p.price_used ? formatPrice(p.price_used) : '-'}</span>
+                    </div>
+                `;
                 tbody.innerHTML += `
                     <tr>
                         <td>#${p.id}</td>
                         <td><div style="font-weight:600">${p.name}</div><div style="font-size:0.8rem;color:var(--text-muted)">${p.brand}</div></td>
                         <td>${p.category_name}</td>
-                        <td>${formatPrice(p.price)}</td>
+                        <td>${prices}</td>
                         <td>
                             <div class="action-flex">
                                 <button class="btn btn-outline" style="padding: 0.25rem 0.75rem; font-size:0.8rem" onclick="editProduct(${p.id})">Edit</button>
@@ -241,40 +274,118 @@
         }
         // ------------------------------------
 
-        document.getElementById('pImage').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+        // --- Variations Manager Logic ---
+        function addVariationRow(key = '', value = '') {
+            const container = document.getElementById('variationsContainer');
+            const row = document.createElement('div');
+            row.className = 'variations-editor';
+            
+            let valStr = '';
+            if (Array.isArray(value)) valStr = value.join(', ');
+            else valStr = value;
+
+            row.innerHTML = `
+                <input type="text" class="form-control var-key" placeholder="Key (e.g. Color)" value="${key}">
+                <input type="text" class="form-control var-value" placeholder="Red, Blue, Green" value="${valStr}">
+                <button type="button" class="btn btn-outline" onclick="this.parentElement.remove()" style="color:red; border-color:red; padding: 0 0.5rem">×</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function getVariationsFromUI() {
+            const vars = {};
+            document.querySelectorAll('.variations-editor').forEach(row => {
+                const key = row.querySelector('.var-key').value.trim();
+                const valueStr = row.querySelector('.var-value').value.trim();
+                if (key && valueStr) {
+                    vars[key] = valueStr.split(',').map(s => s.trim()).filter(s => s);
+                }
+            });
+            return vars;
+        }
+
+        function setVariationsInUI(varsObj) {
+            const container = document.getElementById('variationsContainer');
+            container.innerHTML = '';
+            if (!varsObj) return;
+            Object.entries(varsObj).forEach(([key, val]) => {
+                addVariationRow(key, val);
+            });
+        }
+        // ------------------------------------
+
+        // --- Images Logic ---
+        function renderImagePreview() {
+            const grid = document.getElementById('imagePreviewGrid');
+            grid.innerHTML = '';
+            uploadedImages.forEach((url, index) => {
+                grid.innerHTML += `
+                    <div class="image-preview-item">
+                        <img src="${url}">
+                        <button type="button" class="remove-img" onclick="removeImage(${index})">×</button>
+                    </div>
+                `;
+            });
+        }
+
+        function removeImage(index) {
+            uploadedImages.splice(index, 1);
+            renderImagePreview();
+        }
+
+        document.getElementById('pImageInput').addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            
+            if (uploadedImages.length + files.length > 9) {
+                alert('You can only upload up to 9 images per product.');
+                return;
+            }
+
             const btn = document.getElementById('saveBtn');
             btn.disabled = true;
-            btn.textContent = 'Uploading image...';
+            btn.textContent = 'Uploading image(s)...';
+
             try {
-                const res = await api.upload(file);
-                document.getElementById('pImageUrl').value = res.url;
-                const preview = document.getElementById('imagePreview');
-                preview.style.display = 'block';
-                preview.querySelector('img').src = res.url;
+                for(let file of files) {
+                    const res = await api.upload(file);
+                    uploadedImages.push(res.url);
+                }
+                renderImagePreview();
             } catch (err) {
                 alert('Image upload failed');
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Save Product';
+                e.target.value = ''; // reset input
             }
         });
+        // ------------------------------------
 
         document.getElementById('productForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const specsObj = getSpecsFromUI();
+            const varsObj = getVariationsFromUI();
 
             const payload = {
                 name: document.getElementById('pName').value,
                 brand: document.getElementById('pBrand').value,
                 category_id: document.getElementById('pCategory').value,
-                price: parseFloat(document.getElementById('pPrice').value),
+                price_new: parseFloat(document.getElementById('pPriceNew').value) || null,
+                price_refurbished: parseFloat(document.getElementById('pPriceRefurbished').value) || null,
+                price_used: parseFloat(document.getElementById('pPriceUsed').value) || null,
                 description: document.getElementById('pDesc').value,
                 specs: specsObj,
-                images: document.getElementById('pImageUrl').value ? [document.getElementById('pImageUrl').value] : []
+                variations: varsObj,
+                images: uploadedImages
             };
+
+            // Basic validation
+            if (!payload.price_new && !payload.price_refurbished && !payload.price_used) {
+                alert('At least one price condition must be set.');
+                return;
+            }
 
             const id = document.getElementById('productId').value;
             try {
@@ -305,19 +416,18 @@
             document.getElementById('pName').value = p.name;
             document.getElementById('pBrand').value = p.brand;
             document.getElementById('pCategory').value = p.category_id;
-            document.getElementById('pPrice').value = p.price;
-            document.getElementById('pDesc').value = p.description;
-            setSpecsInUI(p.specs);
             
-            if (p.images && p.images.length > 0) {
-                document.getElementById('pImageUrl').value = p.images[0];
-                const preview = document.getElementById('imagePreview');
-                preview.style.display = 'block';
-                preview.querySelector('img').src = p.images[0];
-            } else {
-                document.getElementById('pImageUrl').value = '';
-                document.getElementById('imagePreview').style.display = 'none';
-            }
+            document.getElementById('pPriceNew').value = p.price_new || '';
+            document.getElementById('pPriceRefurbished').value = p.price_refurbished || '';
+            document.getElementById('pPriceUsed').value = p.price_used || '';
+            
+            document.getElementById('pDesc').value = p.description;
+            
+            setSpecsInUI(p.specs);
+            setVariationsInUI(p.variations);
+            
+            uploadedImages = p.images ? [...p.images] : [];
+            renderImagePreview();
             
             document.getElementById('productModal').classList.add('active');
         }
@@ -326,8 +436,10 @@
             document.getElementById('modalTitle').textContent = 'Add Product';
             document.getElementById('productForm').reset();
             document.getElementById('productId').value = '';
-            document.getElementById('imagePreview').style.display = 'none';
-            document.getElementById('specsContainer').innerHTML = ''; // Clear specs for new product
+            document.getElementById('specsContainer').innerHTML = '';
+            document.getElementById('variationsContainer').innerHTML = '';
+            uploadedImages = [];
+            renderImagePreview();
             document.getElementById('productModal').classList.add('active');
         }
 

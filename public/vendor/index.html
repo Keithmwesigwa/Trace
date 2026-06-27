@@ -75,6 +75,18 @@
 
         let pollInterval;
 
+        function getPriceForCondition(product, condition) {
+            if (condition === 'new') return product.price_new;
+            if (condition === 'refurbished') return product.price_refurbished;
+            if (condition === 'used') return product.price_used;
+            return null;
+        }
+
+        function formatVariations(vars) {
+            if (!vars || Object.keys(vars).length === 0) return '';
+            return Object.entries(vars).map(([k, v]) => `${k}: ${v}`).join(', ');
+        }
+
         function switchVendorTab(tab) {
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             document.querySelector(`.nav-item[href="#${tab}"]`).classList.add('active');
@@ -94,28 +106,40 @@
                     api.products.getAll({ limit: 100 })
                 ]);
 
+                // Formatter for available conditions in a product
+                const getAvailableConditions = (p) => {
+                    const opts = [];
+                    if (p.price_new) opts.push('<option value="new">Brand New</option>');
+                    if (p.price_refurbished) opts.push('<option value="refurbished">Refurbished</option>');
+                    if (p.price_used) opts.push('<option value="used">Used</option>');
+                    return opts.join('');
+                };
+
                 // My Inventory
                 const myGrid = document.getElementById('myInventoryGrid');
-                myGrid.innerHTML = myInv.map(p => `
-                    <div class="product-card" style="padding: 1rem; background: var(--white); border-radius: var(--radius-md);">
-                        <img src="${p.images?.[0] || '/img/placeholder.jpg'}" alt="${p.name}" style="width:100%; height:150px; object-fit:contain; margin-bottom: 1rem;">
-                        <h4 style="margin:0 0 0.5rem 0">${p.name}</h4>
-                        <div style="color:var(--primary); font-weight:600; margin-bottom: 1rem;">${formatPrice(p.price)}</div>
-                        <button class="btn btn-outline" style="width:100%; border-color: red; color: red;" onclick="removeFromInventory(${p.product_id})">Remove</button>
-                    </div>
-                `).join('');
+                myGrid.innerHTML = myInv.map(p => {
+                    const currentPrice = getPriceForCondition(p, p.condition_type);
+                    return `
+                        <div class="product-card" style="padding: 1rem; background: var(--white); border-radius: var(--radius-md);">
+                            <div style="position:absolute; top:1rem; right:1rem; background:var(--primary); color:white; padding:0.2rem 0.5rem; font-size:0.7rem; border-radius:4px; text-transform:uppercase;">${p.condition_type}</div>
+                            <img src="${p.images?.[0] || '/img/placeholder.jpg'}" alt="${p.name}" style="width:100%; height:150px; object-fit:contain; margin-bottom: 1rem;">
+                            <h4 style="margin:0 0 0.5rem 0">${p.name}</h4>
+                            <div style="color:var(--primary); font-weight:600; margin-bottom: 1rem;">${formatPrice(currentPrice)}</div>
+                            <button class="btn btn-outline" style="width:100%; border-color: red; color: red;" onclick="removeFromInventory(${p.product_id}, '${p.condition_type}')">Remove</button>
+                        </div>
+                    `;
+                }).join('');
                 if (myInv.length === 0) myGrid.innerHTML = '<p>Your store is empty. Add products below.</p>';
 
-                // Global Products (exclude ones already in inventory)
-                const myProductIds = new Set(myInv.map(i => i.product_id));
-                const available = globalProducts.products.filter(p => !myProductIds.has(p.id));
-                
+                // Global Products
                 const globalGrid = document.getElementById('globalProductsGrid');
-                globalGrid.innerHTML = available.map(p => `
+                globalGrid.innerHTML = globalProducts.products.map(p => `
                     <div class="product-card" style="padding: 1rem; background: var(--white); border-radius: var(--radius-md);">
                         <img src="${p.images?.[0] || '/img/placeholder.jpg'}" alt="${p.name}" style="width:100%; height:150px; object-fit:contain; margin-bottom: 1rem;">
                         <h4 style="margin:0 0 0.5rem 0">${p.name}</h4>
-                        <div style="color:var(--primary); font-weight:600; margin-bottom: 1rem;">${formatPrice(p.price)}</div>
+                        <select id="cond_add_${p.id}" class="form-control" style="margin-bottom: 0.5rem; padding: 0.3rem; font-size: 0.8rem;">
+                            ${getAvailableConditions(p)}
+                        </select>
                         <button class="btn btn-primary" style="width:100%;" onclick="addToInventory(${p.id})">+ Add to Store</button>
                     </div>
                 `).join('');
@@ -127,14 +151,20 @@
 
         async function addToInventory(productId) {
             try {
-                await api.vendor.addToInventory(productId, 5); // Default stock 5
+                const sel = document.getElementById(`cond_add_${productId}`);
+                if(!sel || !sel.value) return alert('No condition available to stock.');
+                const condition = sel.value;
+                await api.vendor.addToInventory(productId, 5, condition); // Default stock 5
                 loadInventory();
             } catch (err) { alert(err.message); }
         }
 
-        async function removeFromInventory(productId) {
+        async function removeFromInventory(productId, condition_type) {
             try {
-                await api.vendor.removeFromInventory(productId);
+                await fetch(`/api/vendor/inventory/${productId}?condition_type=${condition_type}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
                 loadInventory();
             } catch (err) { alert(err.message); }
         }
@@ -143,19 +173,27 @@
             try {
                 const orders = await api.orders.getMyOrders();
                 const container = document.getElementById('historyContainer');
-                container.innerHTML = orders.map(o => `
-                    <div style="background: var(--white); padding: 1.5rem; border-radius: var(--radius-lg); margin-bottom: 1rem;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
-                            <span style="font-weight: 600;">Order #${o.id} - ${o.product_name}</span>
-                            <span style="color: var(--primary); font-weight: 600;">${formatPrice(o.price)}</span>
+                container.innerHTML = orders.map(o => {
+                    const currentPrice = getPriceForCondition(o, o.condition_type);
+                    const varStr = formatVariations(o.variations);
+                    return `
+                        <div style="background: var(--white); padding: 1.5rem; border-radius: var(--radius-lg); margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                <span style="font-weight: 600;">Order #${o.id} - ${o.product_name}</span>
+                                <span style="color: var(--primary); font-weight: 600;">${formatPrice(currentPrice)}</span>
+                            </div>
+                            <div style="margin-bottom: 1rem;">
+                                <span style="background: #f1f2f6; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; text-transform: uppercase;">${o.condition_type}</span>
+                                ${varStr ? `<span style="font-size: 0.85rem; color: var(--text-muted); margin-left: 0.5rem;">[${varStr}]</span>` : ''}
+                            </div>
+                            <div style="color: var(--text-muted); font-size: 0.9rem;">
+                                <div>Status: <strong style="text-transform: capitalize;">${o.status}</strong></div>
+                                <div>Customer: ${o.customer_name} (${o.customer_contact})</div>
+                                <div>Date: ${new Date(o.created_at).toLocaleString()}</div>
+                            </div>
                         </div>
-                        <div style="color: var(--text-muted); font-size: 0.9rem;">
-                            <div>Status: <strong style="text-transform: capitalize;">${o.status}</strong></div>
-                            <div>Customer: ${o.customer_name} (${o.customer_contact})</div>
-                            <div>Date: ${new Date(o.created_at).toLocaleString()}</div>
-                        </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
                 if (orders.length === 0) container.innerHTML = '<p>No past orders.</p>';
             } catch(e) { console.error(e); }
         }
@@ -170,19 +208,27 @@
                     countBadge.style.display = 'inline-block';
                     countBadge.textContent = orders.length;
                     
-                    container.innerHTML = orders.map(o => `
-                        <div class="order-card order-pulse">
-                            <div>
-                                <h3 style="margin: 0 0 0.5rem 0; color: var(--primary);">${o.product_name}</h3>
-                                <div style="font-weight: 600; margin-bottom: 0.5rem;">${formatPrice(o.price)}</div>
-                                <div style="color: var(--text-muted); font-size: 0.9rem;">
-                                    Distance: <strong>${parseFloat(o.distance).toFixed(2)} km</strong> away<br>
-                                    Customer: ${o.customer_name}
+                    container.innerHTML = orders.map(o => {
+                        const currentPrice = getPriceForCondition(o, o.condition_type);
+                        const varStr = formatVariations(o.variations);
+                        return `
+                            <div class="order-card order-pulse">
+                                <div>
+                                    <h3 style="margin: 0 0 0.5rem 0; color: var(--primary);">${o.product_name}</h3>
+                                    <div style="font-weight: 600; margin-bottom: 0.5rem;">${formatPrice(currentPrice)}</div>
+                                    <div style="margin-bottom: 0.5rem;">
+                                        <span style="background: #dff9fb; color: #130f40; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; text-transform: uppercase;">${o.condition_type}</span>
+                                        ${varStr ? `<span style="font-size: 0.85rem; color: var(--text-muted); margin-left: 0.5rem;">${varStr}</span>` : ''}
+                                    </div>
+                                    <div style="color: var(--text-muted); font-size: 0.9rem;">
+                                        Distance: <strong>${parseFloat(o.distance).toFixed(2)} km</strong> away<br>
+                                        Customer: ${o.customer_name}
+                                    </div>
                                 </div>
+                                <button class="btn btn-primary" style="padding: 1rem 2rem; font-size: 1.1rem;" onclick="acceptOrder(${o.id})">Accept Order</button>
                             </div>
-                            <button class="btn btn-primary" style="padding: 1rem 2rem; font-size: 1.1rem;" onclick="acceptOrder(${o.id})">Accept Order</button>
-                        </div>
-                    `).join('');
+                        `;
+                    }).join('');
                 } else {
                     countBadge.style.display = 'none';
                     container.innerHTML = `
